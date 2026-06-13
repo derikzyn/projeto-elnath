@@ -3,36 +3,22 @@ const { Pool } = require('pg');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname)); // Faz o seu site principal (index.html) continuar funcionando
+app.use(express.static(__dirname));
 
-// Conecta no Banco de Dados do Railway
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-// Cria a tabela automaticamente quando o servidor liga
-pool.query(`
-    CREATE TABLE IF NOT EXISTS produtos (
-        id SERIAL PRIMARY KEY,
-        nome VARCHAR(255),
-        preco VARCHAR(50)
-    );
-    -- Insere um produto de teste para você ver funcionando
-    INSERT INTO produtos (nome, preco)
-    SELECT 'Conjunto Lingerie Pink', '149,90'
-    WHERE NOT EXISTS (SELECT 1 FROM produtos);
-`);
-
-// Rota para ler os produtos do Banco e mandar para a tela
-app.get('/api/produtos', async (req, res) => {
-    const { rows } = await pool.query('SELECT * FROM produtos ORDER BY id ASC');
-    res.json(rows);
+// A parte importante: verificar se a variável existe
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-// Rota para o Admin salvar o preço novo
-app.post('/api/produtos', async (req, res) => {
-    const { id, preco } = req.body;
-    await pool.query('UPDATE produtos SET preco = $1 WHERE id = $2', [preco, id]);
-    res.json({ sucesso: true });
+// Teste de conexão rápida
+pool.connect((err, client, done) => {
+  if (err) {
+    console.error('Erro ao conectar no banco:', err);
+  } else {
+    console.log('Banco de dados conectado com sucesso!');
+    done();
+  }
 });
 
-// Liga o servidor
-app.listen(process.env.PORT || 8080, () => console.log('Servidor e Banco ON!'));
+// ... resto do seu código (rotas app.get e app.post)
