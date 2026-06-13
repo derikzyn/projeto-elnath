@@ -1,5 +1,6 @@
 // ============================================================
-// server.js — Versão com Trava de Segurança
+// server.js — Backend Lingerie Esquenta (CORRIGIDO)
+// Deploy: Railway  |  Node.js + Express + PostgreSQL
 // ============================================================
 
 const express  = require('express');
@@ -10,26 +11,23 @@ const cors     = require('cors');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// Trava de segurança para o banco de dados
-if (!process.env.DATABASE_URL) {
-  console.error("❌ ERRO CRÍTICO: DATABASE_URL não está configurada no Railway!");
-  process.exit(1);
-}
-
-console.log("✅ DATABASE_URL encontrada. Iniciando conexão...");
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
-
-// Middleware
+// ── Middleware ───────────────────────────────────────────────
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Inicialização do Banco
+// CORREÇÃO: Agora aponta para a raiz do projeto, onde estão seus HTMLs
+app.use(express.static(__dirname));
+
+// ── Conexão com o banco ──────────────────────────────────────
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.NODE_ENV === 'production'
+    ? { rejectUnauthorized: false }
+    : false
+});
+
+// ── Cria a tabela ───────────────────────────────────────────
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS produtos (
@@ -48,7 +46,7 @@ async function initDB() {
   console.log('✅ Tabela "produtos" pronta.');
 }
 
-// Rotas
+// ── Rotas da API ────────────────────────────────────────────
 app.get('/api/produtos', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM produtos WHERE ativo = TRUE ORDER BY id ASC');
@@ -73,7 +71,8 @@ app.post('/api/admin/produtos', adminAuth, async (req, res) => {
   if (!nome || !preco) return res.status(400).json({ erro: 'nome e preco são obrigatórios.' });
   try {
     const { rows } = await pool.query(
-      `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [nome, descricao || '', preco, preco_original || null, desconto || null, fotos || []]
     );
     res.status(201).json(rows[0]);
@@ -105,16 +104,21 @@ app.delete('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ erro: 'Erro' }); }
 });
 
-// Middleware de Autenticação
+// ── Fallback ────────────────────────────────────────────────
+// CORREÇÃO: Serve o index.html da raiz
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// ── Auth ────────────────────────────────────────────────────
 function adminAuth(req, res, next) {
   const senha = req.headers['x-admin-senha'] || req.query.senha;
-  if (senha !== (process.env.ADMIN_SENHA || 'esquenta2026')) return res.status(401).json({ erro: 'Não autorizado.' });
+  const SENHA = process.env.ADMIN_SENHA || 'esquenta2026';
+  if (senha !== SENHA) return res.status(401).json({ erro: 'Não autorizado.' });
   next();
 }
 
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
-// Start
+// ── Start ────────────────────────────────────────────────────
 initDB().then(() => {
   app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
 }).catch(err => {
