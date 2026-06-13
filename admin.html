@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin - Esquenta Lingerie</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #fdf5f5; color: #111; }
+        .produto { background: white; padding: 20px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px;}
+        input { padding: 10px; margin-right: 10px; font-size: 16px; width: 100px; border: 1px solid #E1B1B1; border-radius: 4px; }
+        button { padding: 10px 20px; background: #111; color: white; border: none; cursor: pointer; border-radius: 4px; font-weight: bold;}
+        button:hover { background: #E1B1B1; color: #111; }
+    </style>
+</head>
+<body>
+    <h1>Painel Administrativo</h1>
+    <p>Altere os preços abaixo. Eles vão direto para o banco de dados PostgreSQL!</p>
+    
+    <div id="lista-produtos">Carregando banco de dados...</div>
+
+    <script>
+        function carregar() {
+            fetch('/api/produtos').then(r => r.json()).then(produtos => {
+                let html = '';
+                produtos.forEach(p => {
+                    html += `
+                    <div class="produto">
+                        <h3>${p.nome}</h3>
+                        <label>Preço atual: R$ </label>
+                        <input id="preco-${p.id}" value="${p.preco}">
+                        <button onclick="salvar(${p.id})">Salvar Alteração</button>
+                    </div>`;
+                });
+                document.getElementById('lista-produtos').innerHTML = html;
+            });
+        }
+
+        function salvar(id) {
+            const preco = document.getElementById(`preco-${id}`).value;
+            fetch('/api/produtos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, preco })
+            }).then(() => alert('Preço atualizado com sucesso no Banco de Dados!'));
+        }
+
+        carregar();
+    </script>
+</body>
+</html>
