@@ -39,7 +39,7 @@ html{scroll-behavior:smooth;}
     <button onclick="doLogin()" class="w-full py-3 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-brand transition">
       Entrar <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
     </button>
-    <p id="login-error" class="text-red-500 text-xs mt-3 hidden">Senha incorreta. Tente novamente.</p>
+    <p id="login-error" class="text-red-500 text-xs mt-3 hidden">Senha incorrecta. Tente novamente.</p>
   </div>
 </div>
 
@@ -279,7 +279,7 @@ html{scroll-behavior:smooth;}
         <div class="max-w-2xl space-y-5">
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <label class="block text-xs font-bold text-gray-600 mb-3 uppercase tracking-wider">Array JSON de Produtos</label>
-            <textarea id="import-json" rows="12" placeholder='[&#10;  {{ "nome": "Corset Black Rose", "preco": "299,90", "descricao": "...", "fotos": [] }},&#10;  ...&#10;]'
+            <textarea id="import-json" rows="12" placeholder='[&#10;  { "nome": "Corset Black Rose", "preco": "299,90", "descricao": "...", "fotos": [] },&#10;  ...&#10;]'
               class="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs font-mono focus:outline-none focus:border-brand resize-none bg-gray-50"></textarea>
           </div>
           <div class="flex gap-3">
@@ -323,6 +323,7 @@ html{scroll-behavior:smooth;}
 // ============================================================
 // CONFIG
 // ============================================================
+const BASE_URL = 'https://projeto-elnath-production.up.railway.app';
 let SENHA = '';
 let todosOsProdutos = []; // cache local
 let fotosBase64 = [];     // fotos do form atual
@@ -334,7 +335,7 @@ function doLogin() {
   const inp = document.getElementById('senha-input').value.trim();
   if (!inp) return;
   // Test against API
-  fetch('/api/admin/produtos', { headers: { 'x-admin-senha': inp } })
+  fetch(`${BASE_URL}/api/admin/produtos`, { headers: { 'x-admin-senha': inp } })
     .then(res => {
       if (res.ok) {
         SENHA = inp;
@@ -381,7 +382,7 @@ function showTab(tab) {
 async function loadDashboard() {
   // Health check
   try {
-    const h = await fetch('/api/health').then(r => r.json());
+    const h = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
     document.getElementById('dash-db-status').textContent = h.db === 'conectado' ? '✅ Conectado' : '❌ Desconectado';
     document.getElementById('dash-db-status').className = h.db === 'conectado' ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500';
   } catch {
@@ -504,7 +505,7 @@ function editarProduto(id) {
 }
 
 async function salvarProduto() {
-  const id    = document.getElementById('edit-id').value;
+  const id    document.getElementById('edit-id').value;
   const nome  = document.getElementById('f-nome').value.trim();
   const desc  = document.getElementById('f-desc').value.trim();
   const preco = document.getElementById('f-preco').value.trim();
@@ -551,13 +552,13 @@ function resetForm() {
   renderFotoPreview();
 }
 
-function calcDesconto() {
+/*************  v29c13f6-f14d-4ba9-9e8c-8434b92b6eb4  *************/function calcDesconto() {
   const preco  = parseFloat(document.getElementById('f-preco').value.replace(',','.'));
   const orig   = parseFloat(document.getElementById('f-original').value.replace(',','.'));
   if (!preco || !orig || orig <= preco) { showToast('Preencha preço real e preço "de" primeiro.', 'info'); return; }
   const pct = Math.round((1 - preco/orig)*100);
   document.getElementById('f-desconto').value = `${pct}% OFF`;
-  showToast(`Badge calculado: ${pct}% OFF`);
+  showToast(`Badge calculated: ${pct}% OFF`);
 }
 
 // ============================================================
@@ -571,41 +572,6 @@ function handleDrop(e) {
   handleFiles(e.dataTransfer.files);
 }
 
-function handleFiles(files) {
-  const remaining = 5 - fotosBase64.length;
-  if (remaining <= 0) { showToast('Máximo de 5 fotos atingido.', 'info'); return; }
-  Array.from(files).slice(0, remaining).forEach(file => {
-    if (!file.type.startsWith('image/')) return;
-    if (file.size > 5*1024*1024) { showToast(`"${file.name}" é muito grande (max 5MB).`, 'erro'); return; }
-    const reader = new FileReader();
-    reader.onload = e => {
-      fotosBase64.push(e.target.result);
-      renderFotoPreview();
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function renderFotoPreview() {
-  const prev = document.getElementById('foto-preview');
-  document.getElementById('foto-count').textContent = `${fotosBase64.length} foto(s)`;
-  prev.innerHTML = fotosBase64.map((src, i) => `
-    <div class="relative group">
-      <img src="${src}" class="thumb" alt="Foto ${i+1}">
-      <button onclick="removerFoto(${i})"
-        class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-        ✕
-      </button>
-      ${i===0?'<span class="absolute bottom-0.5 left-0.5 text-[9px] bg-black/60 text-white px-1 rounded font-bold">CAPA</span>':''}
-    </div>
-  `).join('');
-}
-
-function removerFoto(i) {
-  fotosBase64.splice(i, 1);
-  renderFotoPreview();
-}
-
 // ============================================================
 // IMPORTAR JSON
 // ============================================================
@@ -616,7 +582,7 @@ async function importarJSON() {
   try { lista = JSON.parse(raw); } catch { showToast('JSON inválido. Verifique a formatação.', 'erro'); return; }
   try {
     const res = await apiFetch('/api/admin/importar', 'POST', lista);
-    showToast(`✅ ${res.importados} produto(s) importados!`);
+    showToast(`? ${res.importados} produto(s) importados!`);
     document.getElementById('import-json').value = '';
     loadDashboard();
   } catch (err) { showToast(err.message, 'erro'); }
@@ -631,7 +597,7 @@ async function apiFetch(url, method = 'GET', body = null) {
     headers: { 'Content-Type': 'application/json', 'x-admin-senha': SENHA },
   };
   if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(url, opts);
+  const res = await fetch(`${BASE_URL}${url}`, opts);
   const data = await res.json();
   if (!res.ok) throw new Error(data.erro || `Erro ${res.status}`);
   return data;
