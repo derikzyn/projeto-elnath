@@ -1,631 +1,427 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin — Lingerie Esquenta</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script>
-tailwind.config={theme:{extend:{colors:{brand:"#E1B1B1",brandDark:"#111111",brandLight:"#FDF5F5"},fontFamily:{sans:["Montserrat","sans-serif"],serif:["Playfair Display","serif"]}}}}
-</script>
-<style>
-html{scroll-behavior:smooth;}
-.no-scrollbar::-webkit-scrollbar{display:none;}
-.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
-#login-screen{transition:opacity .3s;}
-.thumb{width:72px;height:90px;object-fit:cover;object-position:top;border-radius:8px;border:2px solid #E1B1B1;}
-.thumb.selected{border-color:#111;}
-#toast{transition:all .3s cubic-bezier(.34,1.56,.64,1);}
-.modal-overlay{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);}
-.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.drag-over{border-color:#E1B1B1!important;background:#FDF5F5!important;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Admin — Esquenta Lingerie</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Montserrat', sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; }
+
+        /* LOGIN */
+        #login-screen {
+            position: fixed; inset: 0; background: #111;
+            display: flex; align-items: center; justify-content: center; z-index: 999;
+            transition: opacity .3s;
+        }
+        .login-box {
+            background: white; border-radius: 20px; padding: 40px;
+            width: 100%; max-width: 360px; text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,.4);
+        }
+        .login-box h1 { font-family: 'Playfair Display', serif; font-size: 1.6rem; margin-bottom: 6px; }
+        .login-box p  { font-size: .75rem; color: #999; margin-bottom: 24px; text-transform: uppercase; letter-spacing: .1em; }
+        .login-box input {
+            width: 100%; padding: 14px; border: 1.5px solid #e0d0d0;
+            border-radius: 10px; font-size: 1rem; text-align: center;
+            letter-spacing: .15em; margin-bottom: 12px; outline: none;
+            transition: border-color .2s;
+        }
+        .login-box input:focus { border-color: #E1B1B1; }
+        .login-box button {
+            width: 100%; padding: 14px; background: #111; color: white;
+            border: none; border-radius: 10px; font-weight: 700;
+            font-size: .8rem; letter-spacing: .1em; text-transform: uppercase;
+            cursor: pointer; transition: background .2s;
+        }
+        .login-box button:hover { background: #E1B1B1; color: #111; }
+        #login-erro { color: #e53; font-size: .8rem; margin-top: 10px; min-height: 18px; }
+
+        /* APP */
+        #app { display: none; }
+
+        /* HEADER */
+        header {
+            background: #111; color: white; padding: 16px 24px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,.3);
+        }
+        header h1 { font-family: 'Playfair Display', serif; font-size: 1.3rem; }
+        header span { font-size: .7rem; color: #E1B1B1; letter-spacing: .15em; text-transform: uppercase; display: block; }
+        .header-right { display: flex; gap: 12px; align-items: center; }
+        .btn-sair {
+            background: transparent; border: 1px solid rgba(255,255,255,.3);
+            color: white; padding: 8px 16px; border-radius: 8px;
+            font-size: .7rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: .08em; cursor: pointer; transition: all .2s;
+        }
+        .btn-sair:hover { background: rgba(255,255,255,.1); }
+
+        /* MAIN */
+        main { max-width: 900px; margin: 0 auto; padding: 30px 20px; }
+
+        /* STATUS BAR */
+        #status-bar {
+            background: white; border-radius: 12px; padding: 14px 20px;
+            margin-bottom: 24px; display: flex; align-items: center;
+            gap: 12px; font-size: .8rem; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            border-left: 4px solid #E1B1B1;
+        }
+        #status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+        #status-dot.ok  { background: #22c55e; }
+        #status-dot.err { background: #ef4444; }
+
+        /* SEARCH */
+        .search-row {
+            display: flex; gap: 12px; margin-bottom: 20px;
+        }
+        .search-row input {
+            flex: 1; padding: 12px 16px; border: 1.5px solid #e0d0d0;
+            border-radius: 10px; font-size: .9rem; outline: none; transition: border-color .2s;
+        }
+        .search-row input:focus { border-color: #E1B1B1; }
+        .btn-reload {
+            padding: 12px 20px; background: #111; color: white;
+            border: none; border-radius: 10px; font-size: .75rem;
+            font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+            cursor: pointer; transition: background .2s; white-space: nowrap;
+        }
+        .btn-reload:hover { background: #E1B1B1; color: #111; }
+
+        /* PRODUCT CARD */
+        .produto {
+            background: white; border-radius: 14px; padding: 20px;
+            margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+            display: flex; align-items: center; gap: 16px;
+            transition: box-shadow .2s;
+        }
+        .produto:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+        .produto-foto {
+            width: 60px; height: 75px; border-radius: 8px;
+            object-fit: cover; object-position: top; border: 1.5px solid #f0e0e0;
+            flex-shrink: 0;
+        }
+        .produto-foto-placeholder {
+            width: 60px; height: 75px; border-radius: 8px;
+            background: #f5e8e8; display: flex; align-items: center;
+            justify-content: center; font-size: 1.4rem; flex-shrink: 0;
+        }
+        .produto-info { flex: 1; min-width: 0; }
+        .produto-nome {
+            font-family: 'Playfair Display', serif; font-size: 1rem;
+            font-weight: 600; margin-bottom: 4px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .produto-desc {
+            font-size: .72rem; color: #999; margin-bottom: 10px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .preco-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .preco-label { font-size: .7rem; color: #999; text-transform: uppercase; letter-spacing: .08em; }
+        .preco-input {
+            width: 100px; padding: 8px 12px; border: 1.5px solid #e0d0d0;
+            border-radius: 8px; font-size: .95rem; font-weight: 600;
+            outline: none; transition: border-color .2s;
+        }
+        .preco-input:focus { border-color: #E1B1B1; }
+        .original-input {
+            width: 100px; padding: 8px 12px; border: 1.5px solid #e0d0d0;
+            border-radius: 8px; font-size: .85rem; color: #999;
+            outline: none; transition: border-color .2s;
+        }
+        .original-input:focus { border-color: #E1B1B1; }
+        .desconto-input {
+            width: 90px; padding: 8px 12px; border: 1.5px solid #fca5a5;
+            border-radius: 8px; font-size: .8rem; color: #ef4444;
+            font-weight: 700; outline: none; transition: border-color .2s;
+        }
+        .desconto-input:focus { border-color: #ef4444; }
+        .btn-salvar {
+            padding: 9px 20px; background: #111; color: white;
+            border: none; border-radius: 8px; font-size: .72rem;
+            font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+            cursor: pointer; transition: all .2s; white-space: nowrap;
+        }
+        .btn-salvar:hover  { background: #E1B1B1; color: #111; }
+        .btn-salvar:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-salvar.salvando { background: #999; }
+
+        /* BADGE */
+        .badge {
+            display: inline-block; padding: 3px 8px;
+            background: #fef2f2; color: #ef4444;
+            border: 1px solid #fca5a5; border-radius: 6px;
+            font-size: .65rem; font-weight: 700;
+        }
+
+        /* TOAST */
+        #toast {
+            position: fixed; bottom: 24px; right: 24px;
+            background: #111; color: white; padding: 14px 20px;
+            border-radius: 12px; font-size: .8rem; font-weight: 600;
+            border-left: 4px solid #E1B1B1;
+            transform: translateY(80px); opacity: 0;
+            transition: all .35s cubic-bezier(.34,1.56,.64,1);
+            z-index: 999; max-width: 300px;
+        }
+        #toast.show { transform: translateY(0); opacity: 1; }
+        #toast.erro { border-left-color: #ef4444; }
+
+        /* EMPTY / LOADING */
+        .estado {
+            text-align: center; padding: 60px 20px;
+            color: #999; font-size: .9rem;
+        }
+        .estado p { margin-top: 8px; font-size: .8rem; }
+    </style>
 </head>
-<body class="bg-gray-100 font-sans min-h-screen">
+<body>
 
-<!-- ===== LOGIN ===== -->
-<div id="login-screen" class="fixed inset-0 z-50 bg-brandDark flex items-center justify-center p-4">
-  <div class="bg-white rounded-3xl p-10 w-full max-w-sm shadow-2xl text-center">
-    <div class="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center mx-auto mb-4">
-      <i class="fa-solid fa-lock text-2xl text-brand"></i>
+<!-- LOGIN -->
+<div id="login-screen">
+    <div class="login-box">
+        <h1>ESQUENTA</h1>
+        <p>Lingerie — Painel Admin</p>
+        <input type="password" id="senha-input" placeholder="••••••••••"
+               onkeydown="if(event.key==='Enter') fazerLogin()">
+        <button onclick="fazerLogin()">Entrar</button>
+        <div id="login-erro"></div>
     </div>
-    <h1 class="font-serif text-2xl font-bold mb-1">Área Admin</h1>
-    <p class="text-xs text-gray-400 mb-6">Lingerie Esquenta — Painel de Gerenciamento</p>
-    <input id="senha-input" type="password" placeholder="Senha de acesso..." onkeydown="if(event.key==='Enter')doLogin()"
-      class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand mb-3 text-center tracking-widest">
-    <button onclick="doLogin()" class="w-full py-3 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-brand transition">
-      Entrar <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
-    </button>
-    <p id="login-error" class="text-red-500 text-xs mt-3 hidden">Senha incorrecta. Tente novamente.</p>
-  </div>
 </div>
 
-<!-- ===== MAIN APP (hidden until login) ===== -->
-<div id="app" class="hidden min-h-screen">
-
-  <!-- SIDEBAR -->
-  <div class="flex h-screen overflow-hidden">
-    <aside class="w-64 bg-brandDark text-white flex flex-col shrink-0">
-      <!-- Logo -->
-      <div class="p-6 border-b border-white/10">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 bg-brand/20 rounded-xl flex items-center justify-center">
-            <i class="fa-solid fa-store text-brand"></i>
-          </div>
-          <div>
-            <p class="font-serif font-bold text-sm">ESQUENTA</p>
-            <p class="text-[10px] text-white/40 uppercase tracking-wider">Painel Admin</p>
-          </div>
+<!-- APP -->
+<div id="app">
+    <header>
+        <div>
+            <h1>Esquenta Admin</h1>
+            <span>Painel de Gerenciamento</span>
         </div>
-      </div>
-
-      <!-- Nav -->
-      <nav class="flex-grow p-4 space-y-1">
-        <button onclick="showTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 transition text-left">
-          <i class="fa-solid fa-chart-line w-4"></i> Dashboard
-        </button>
-        <button onclick="showTab('produtos')" id="nav-produtos" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 transition text-left">
-          <i class="fa-solid fa-shirt w-4"></i> Produtos
-        </button>
-        <button onclick="showTab('novo')" id="nav-novo" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 transition text-left">
-          <i class="fa-solid fa-plus w-4"></i> Novo Produto
-        </button>
-        <button onclick="showTab('importar')" id="nav-importar" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 transition text-left">
-          <i class="fa-solid fa-file-import w-4"></i> Importar JSON
-        </button>
-      </nav>
-
-      <!-- Footer -->
-      <div class="p-4 border-t border-white/10">
-        <a href="/" target="_blank" class="flex items-center gap-2 px-4 py-2 text-xs text-white/50 hover:text-white transition">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver Site
-        </a>
-        <button onclick="doLogout()" class="w-full flex items-center gap-2 px-4 py-2 text-xs text-white/50 hover:text-red-400 transition">
-          <i class="fa-solid fa-right-from-bracket"></i> Sair
-        </button>
-      </div>
-    </aside>
-
-    <!-- CONTENT AREA -->
-    <main class="flex-grow overflow-y-auto bg-gray-50">
-
-      <!-- ── DASHBOARD ── -->
-      <div id="tab-dashboard" class="tab-content p-8">
-        <h2 class="font-serif text-3xl font-bold mb-2">Dashboard</h2>
-        <p class="text-gray-500 text-sm mb-8">Visão geral da loja.</p>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-brand/15 rounded-xl flex items-center justify-center">
-                <i class="fa-solid fa-shirt text-brand text-xl"></i>
-              </div>
-              <div>
-                <p class="text-2xl font-black" id="dash-total">—</p>
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Produtos Ativos</p>
-              </div>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-red-50 rounded-xl flex items-center justify-center">
-                <i class="fa-solid fa-tag text-red-400 text-xl"></i>
-              </div>
-              <div>
-                <p class="text-2xl font-black" id="dash-oferta">—</p>
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Em Oferta</p>
-              </div>
-            </div>
-          </div>
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 bg-green-50 rounded-xl flex items-center justify-center">
-                <i class="fa-solid fa-circle-check text-green-400 text-xl"></i>
-              </div>
-              <div>
-                <p class="text-xs text-green-600 font-bold" id="dash-db-status">Verificando…</p>
-                <p class="text-xs text-gray-400 uppercase tracking-wider">Status do Banco</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <!-- Quick actions -->
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 class="font-semibold text-sm mb-4 uppercase tracking-wider text-gray-500">Ações Rápidas</h3>
-          <div class="flex flex-wrap gap-3">
-            <button onclick="showTab('novo')" class="px-5 py-2.5 bg-brandDark text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-brand transition">
-              <i class="fa-solid fa-plus mr-2"></i>Novo Produto
-            </button>
-            <button onclick="showTab('produtos')" class="px-5 py-2.5 bg-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gray-200 transition">
-              <i class="fa-solid fa-list mr-2"></i>Ver Todos
-            </button>
-            <a href="/" target="_blank" class="px-5 py-2.5 bg-brand/20 text-brandDark text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-brand/30 transition">
-              <i class="fa-solid fa-eye mr-2"></i>Ver Site
+        <div class="header-right">
+            <a href="https://projeto-elnath-production.up.railway.app" target="_blank"
+               style="color:#E1B1B1;font-size:.7rem;text-decoration:none;letter-spacing:.08em;">
+                Ver Site ↗
             </a>
-          </div>
+            <button class="btn-sair" onclick="sair()">Sair</button>
         </div>
-      </div>
+    </header>
 
-      <!-- ── LISTA DE PRODUTOS ── -->
-      <div id="tab-produtos" class="tab-content hidden p-8">
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h2 class="font-serif text-3xl font-bold">Produtos</h2>
-            <p class="text-gray-500 text-sm">Gerencie todos os conjuntos da loja.</p>
-          </div>
-          <button onclick="showTab('novo')" class="px-5 py-3 bg-brandDark text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-brand transition">
-            <i class="fa-solid fa-plus mr-2"></i>Novo
-          </button>
+    <main>
+        <!-- Status do banco -->
+        <div id="status-bar">
+            <div id="status-dot"></div>
+            <span id="status-txt">Conectando ao servidor...</span>
         </div>
 
-        <!-- Search + filter -->
-        <div class="flex gap-3 mb-6">
-          <div class="relative flex-grow">
-            <input id="search-prod" type="text" placeholder="Buscar por nome…" oninput="filterProdutos(this.value)"
-              class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand bg-white">
-            <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          </div>
-          <select onchange="filterProdutos(document.getElementById('search-prod').value)" id="filter-ativo"
-            class="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none bg-white text-gray-600">
-            <option value="todos">Todos</option>
-            <option value="ativos">Ativos</option>
-            <option value="inativos">Inativos</option>
-          </select>
+        <!-- Busca + Reload -->
+        <div class="search-row">
+            <input type="text" id="busca" placeholder="Buscar produto pelo nome..."
+                   oninput="filtrar(this.value)">
+            <button class="btn-reload" onclick="carregarProdutos()">↻ Recarregar</button>
         </div>
 
-        <div id="prod-list" class="space-y-3">
-          <div class="text-center py-12 text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">Carregando…</p></div>
+        <!-- Lista -->
+        <div id="lista-produtos">
+            <div class="estado">Carregando produtos...</div>
         </div>
-      </div>
-
-      <!-- ── NOVO / EDITAR PRODUTO ── -->
-      <div id="tab-novo" class="tab-content hidden p-8">
-        <h2 class="font-serif text-3xl font-bold mb-1" id="form-title">Novo Produto</h2>
-        <p class="text-gray-500 text-sm mb-8" id="form-subtitle">Preencha os dados e adicione fotos.</p>
-
-        <div class="max-w-2xl space-y-6">
-          <!-- hidden edit id -->
-          <input type="hidden" id="edit-id">
-
-          <!-- Nome -->
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-            <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Informações</h3>
-            <div>
-              <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Nome do Conjunto *</label>
-              <input id="f-nome" type="text" placeholder="Ex: Corset Black Rose Premium"
-                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
-            </div>
-            <div>
-              <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Descrição</label>
-              <textarea id="f-desc" rows="3" placeholder="Descrição breve do produto…"
-                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand resize-none"></textarea>
-            </div>
-          </div>
-
-          <!-- Preços -->
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-            <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Preços</h3>
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Preço Real *</label>
-                <div class="relative">
-                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">R$</span>
-                  <input id="f-preco" type="text" placeholder="299,90"
-                    class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
-                </div>
-              </div>
-              <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Preço "De" (riscado)</label>
-                <div class="relative">
-                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">R$</span>
-                  <input id="f-original" type="text" placeholder="379,90 (opcional)"
-                    class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
-                </div>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4 items-end">
-              <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Badge de Desconto</label>
-                <input id="f-desconto" type="text" placeholder="Ex: 20% OFF"
-                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
-              </div>
-              <button onclick="calcDesconto()" class="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold uppercase tracking-wider rounded-xl transition">
-                <i class="fa-solid fa-calculator mr-1"></i> Calcular % auto
-              </button>
-            </div>
-          </div>
-
-          <!-- Fotos -->
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Fotos (máx. 5)</h3>
-              <span class="text-xs text-gray-400" id="foto-count">0 foto(s)</span>
-            </div>
-
-            <!-- Upload area -->
-            <div id="drop-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
-              class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center cursor-pointer hover:border-brand transition"
-              onclick="document.getElementById('foto-input').click()">
-              <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-300 mb-2"></i>
-              <p class="text-sm text-gray-400 font-medium">Arraste fotos aqui ou clique para selecionar</p>
-              <p class="text-xs text-gray-300 mt-1">JPG, PNG — até 5 fotos, max 5MB cada</p>
-              <input type="file" id="foto-input" accept="image/*" multiple class="hidden" onchange="handleFiles(this.files)">
-            </div>
-
-            <!-- Preview -->
-            <div id="foto-preview" class="flex gap-3 flex-wrap"></div>
-          </div>
-
-          <!-- Save button -->
-          <div class="flex gap-3">
-            <button onclick="salvarProduto()" id="btn-salvar"
-              class="flex-1 py-4 bg-brandDark hover:bg-brand text-white font-bold text-sm uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2">
-              <i class="fa-solid fa-floppy-disk"></i> <span id="btn-salvar-txt">Salvar Produto</span>
-            </button>
-            <button onclick="resetForm()" class="px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold uppercase tracking-wider rounded-xl transition">
-              Limpar
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- ── IMPORTAR JSON ── -->
-      <div id="tab-importar" class="tab-content hidden p-8">
-        <h2 class="font-serif text-3xl font-bold mb-1">Importar Produtos</h2>
-        <p class="text-gray-500 text-sm mb-8">Cole um array JSON de produtos para importar de uma vez.</p>
-
-        <div class="max-w-2xl space-y-5">
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <label class="block text-xs font-bold text-gray-600 mb-3 uppercase tracking-wider">Array JSON de Produtos</label>
-            <textarea id="import-json" rows="12" placeholder='[&#10;  { "nome": "Corset Black Rose", "preco": "299,90", "descricao": "...", "fotos": [] },&#10;  ...&#10;]'
-              class="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs font-mono focus:outline-none focus:border-brand resize-none bg-gray-50"></textarea>
-          </div>
-          <div class="flex gap-3">
-            <button onclick="importarJSON()" class="flex-1 py-4 bg-brandDark hover:bg-brand text-white font-bold text-sm uppercase tracking-wider rounded-xl transition">
-              <i class="fa-solid fa-file-import mr-2"></i> Importar
-            </button>
-            <button onclick="document.getElementById('import-json').value=''" class="px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold uppercase tracking-wider rounded-xl transition">
-              Limpar
-            </button>
-          </div>
-          <div class="bg-brand/10 border border-brand/30 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">
-            <strong>Campos aceitos:</strong> nome*, preco*, descricao, preco_original, desconto, fotos (array de base64 ou URLs).<br>
-            <strong>*</strong> obrigatórios. Produtos duplicados são ignorados automaticamente.
-          </div>
-        </div>
-      </div>
-
     </main>
-  </div>
 </div>
 
-<!-- ── MODAL EDITAR ── -->
-<div id="edit-modal" class="fixed inset-0 z-50 modal-overlay hidden flex items-center justify-center p-4">
-  <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[92vh] relative">
-    <button onclick="closeEditModal()" class="absolute top-4 right-4 w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 transition">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-    <div class="p-8" id="edit-modal-content">
-      <!-- populated by JS -->
-    </div>
-  </div>
-</div>
-
-<!-- TOAST -->
-<div id="toast" class="fixed bottom-6 right-6 z-[60] bg-brandDark text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 translate-y-24 opacity-0 pointer-events-none border border-brand/30">
-  <i id="toast-icon" class="fa-solid fa-circle-check text-brand text-lg"></i>
-  <span id="toast-msg" class="text-sm font-semibold"></span>
-</div>
+<!-- Toast -->
+<div id="toast"></div>
 
 <script>
-// ============================================================
-// CONFIG
-// ============================================================
-const BASE_URL = 'https://projeto-elnath-production.up.railway.app';
-let SENHA = '';
-let todosOsProdutos = []; // cache local
-let fotosBase64 = [];     // fotos do form atual
+    // ── CONFIG ──────────────────────────────────────────────────
+    const API = 'https://projeto-elnath-production.up.railway.app';
+    let SENHA = '';
+    let todosOsProdutos = [];
 
-// ============================================================
-// LOGIN
-// ============================================================
-function doLogin() {
-  const inp = document.getElementById('senha-input').value.trim();
-  if (!inp) return;
-  // Test against API
-  fetch(`${BASE_URL}/api/admin/produtos`, { headers: { 'x-admin-senha': inp } })
-    .then(res => {
-      if (res.ok) {
-        SENHA = inp;
-        document.getElementById('login-screen').style.opacity = '0';
-        setTimeout(() => {
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('app').classList.remove('hidden');
-          showTab('dashboard');
-          loadDashboard();
-        }, 300);
-      } else {
-        document.getElementById('login-error').classList.remove('hidden');
-      }
-    })
-    .catch(() => {
-      document.getElementById('login-error').textContent = 'Erro de conexão. Verifique o servidor.';
-      document.getElementById('login-error').classList.remove('hidden');
-    });
-}
+    // ── LOGIN ────────────────────────────────────────────────────
+    function fazerLogin() {
+        const s = document.getElementById('senha-input').value.trim();
+        if (!s) return;
 
-function doLogout() {
-  SENHA = '';
-  location.reload();
-}
+        document.getElementById('login-erro').textContent = '';
 
-// ============================================================
-// TABS
-// ============================================================
-function showTab(tab) {
-  document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-white/10','text-white'));
-  document.getElementById(`tab-${tab}`).classList.remove('hidden');
-  const nb = document.getElementById(`nav-${tab}`);
-  if (nb) { nb.classList.add('bg-white/10','text-white'); nb.classList.remove('text-white/70'); }
-
-  if (tab === 'produtos') loadProdutos();
-  if (tab === 'dashboard') loadDashboard();
-  if (tab === 'novo') { resetForm(); }
-}
-
-// ============================================================
-// DASHBOARD
-// ============================================================
-async function loadDashboard() {
-  // Health check
-  try {
-    const h = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
-    document.getElementById('dash-db-status').textContent = h.db === 'conectado' ? '✅ Conectado' : '❌ Desconectado';
-    document.getElementById('dash-db-status').className = h.db === 'conectado' ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500';
-  } catch {
-    document.getElementById('dash-db-status').textContent = '❌ Servidor offline';
-    document.getElementById('dash-db-status').className = 'text-sm font-bold text-red-500';
-  }
-  // Products count
-  try {
-    const ps = await apiFetch('/api/admin/produtos');
-    const ativos = ps.filter(p => p.ativo);
-    const ofertas = ativos.filter(p => p.desconto);
-    document.getElementById('dash-total').textContent = ativos.length;
-    document.getElementById('dash-oferta').textContent = ofertas.length;
-  } catch {}
-}
-
-// ============================================================
-// PRODUTOS LIST
-// ============================================================
-async function loadProdutos() {
-  const cont = document.getElementById('prod-list');
-  cont.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p class="text-sm">Carregando…</p></div>';
-  try {
-    todosOsProdutos = await apiFetch('/api/admin/produtos');
-    renderProdList(todosOsProdutos);
-  } catch (err) {
-    cont.innerHTML = `<div class="text-center py-8 text-red-400"><i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i><p class="text-sm">${err.message}</p></div>`;
-  }
-}
-
-function renderProdList(lista) {
-  const cont = document.getElementById('prod-list');
-  if (!lista.length) {
-    cont.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fa-solid fa-box-open text-4xl mb-3"></i><p>Nenhum produto encontrado.</p></div>';
-    return;
-  }
-  cont.innerHTML = lista.map(p => `
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 ${!p.ativo?'opacity-50':''}">
-      ${p.fotos && p.fotos.length
-        ? `<img src="${p.fotos[0]}" class="thumb shrink-0" alt="${p.nome}">`
-        : `<div class="thumb shrink-0 bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-image text-gray-300 text-xl"></i></div>`}
-      <div class="flex-grow min-w-0">
-        <div class="flex items-start gap-2 flex-wrap">
-          <h3 class="font-serif font-semibold text-sm text-gray-800 leading-tight">${p.nome}</h3>
-          ${!p.ativo ? '<span class="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase">Inativo</span>' : ''}
-          ${p.desconto ? `<span class="text-[10px] bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full font-bold">${p.desconto}</span>` : ''}
-        </div>
-        <div class="flex items-center gap-3 mt-1">
-          <span class="text-base font-black text-gray-800">R$ ${p.preco}</span>
-          ${p.preco_original ? `<span class="text-xs text-gray-400 line-through">R$ ${p.preco_original}</span>` : ''}
-          <span class="text-xs text-gray-400">${p.fotos ? p.fotos.length : 0} foto(s)</span>
-        </div>
-        <p class="text-xs text-gray-400 mt-1 truncate">${p.descricao || '—'}</p>
-      </div>
-      <div class="flex gap-2 shrink-0">
-        <button onclick="editarProduto(${p.id})" class="w-9 h-9 bg-gray-100 hover:bg-brand/20 text-gray-600 hover:text-brandDark rounded-xl flex items-center justify-center transition" title="Editar">
-          <i class="fa-solid fa-pen text-xs"></i>
-        </button>
-        <button onclick="toggleAtivo(${p.id}, ${p.ativo})" class="w-9 h-9 ${p.ativo?'bg-yellow-50 hover:bg-yellow-100 text-yellow-600':'bg-green-50 hover:bg-green-100 text-green-600'} rounded-xl flex items-center justify-center transition" title="${p.ativo?'Desativar':'Ativar'}">
-          <i class="fa-solid ${p.ativo?'fa-eye-slash':'fa-eye'} text-xs"></i>
-        </button>
-        <button onclick="excluirProduto(${p.id}, '${p.nome.replace(/'/g,"\\'")}' )" class="w-9 h-9 bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-600 rounded-xl flex items-center justify-center transition" title="Excluir">
-          <i class="fa-solid fa-trash text-xs"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function filterProdutos(q) {
-  const filtro = document.getElementById('filter-ativo').value;
-  let lista = todosOsProdutos;
-  if (filtro === 'ativos')   lista = lista.filter(p => p.ativo);
-  if (filtro === 'inativos') lista = lista.filter(p => !p.ativo);
-  if (q.trim()) lista = lista.filter(p => p.nome.toLowerCase().includes(q.toLowerCase()));
-  renderProdList(lista);
-}
-
-// ============================================================
-// CRUD
-// ============================================================
-async function toggleAtivo(id, ativo) {
-  try {
-    await apiFetch(`/api/admin/produtos/${id}`, 'PUT', { ativo: !ativo });
-    showToast(ativo ? 'Produto desativado.' : 'Produto ativado.', 'info');
-    loadProdutos();
-    loadDashboard();
-  } catch (err) { showToast(err.message, 'erro'); }
-}
-
-async function excluirProduto(id, nome) {
-  if (!confirm(`Desativar "${nome}"?\n(O produto ficará oculto no site mas pode ser reativado.)`)) return;
-  try {
-    await apiFetch(`/api/admin/produtos/${id}`, 'DELETE');
-    showToast('Produto desativado.', 'info');
-    loadProdutos();
-    loadDashboard();
-  } catch (err) { showToast(err.message, 'erro'); }
-}
-
-function editarProduto(id) {
-  const p = todosOsProdutos.find(x => x.id === id);
-  if (!p) return;
-  // Populate form and switch to tab-novo
-  document.getElementById('form-title').textContent = 'Editar Produto';
-  document.getElementById('form-subtitle').textContent = `Editando: ${p.nome}`;
-  document.getElementById('edit-id').value = p.id;
-  document.getElementById('f-nome').value = p.nome || '';
-  document.getElementById('f-desc').value = p.descricao || '';
-  document.getElementById('f-preco').value = p.preco || '';
-  document.getElementById('f-original').value = p.preco_original || '';
-  document.getElementById('f-desconto').value = p.desconto || '';
-  document.getElementById('btn-salvar-txt').textContent = 'Atualizar Produto';
-
-  // Reload existing photos
-  fotosBase64 = p.fotos || [];
-  renderFotoPreview();
-
-  showTab('novo');
-}
-
-async function salvarProduto() {
-  const id    document.getElementById('edit-id').value;
-  const nome  = document.getElementById('f-nome').value.trim();
-  const desc  = document.getElementById('f-desc').value.trim();
-  const preco = document.getElementById('f-preco').value.trim();
-  const orig  = document.getElementById('f-original').value.trim();
-  const desc2 = document.getElementById('f-desconto').value.trim();
-
-  if (!nome || !preco) { showToast('Nome e preço são obrigatórios!', 'erro'); return; }
-
-  const btn = document.getElementById('btn-salvar');
-  btn.innerHTML = '<div class="spinner"></div>';
-  btn.disabled = true;
-
-  const body = { nome, descricao: desc, preco, preco_original: orig || null, desconto: desc2 || null, fotos: fotosBase64 };
-
-  try {
-    if (id) {
-      await apiFetch(`/api/admin/produtos/${id}`, 'PUT', body);
-      showToast('Produto atualizado com sucesso!');
-    } else {
-      await apiFetch('/api/admin/produtos', 'POST', body);
-      showToast('Produto criado com sucesso!');
+        // Testa a senha batendo na API
+        fetch(`${API}/api/admin/produtos`, {
+            headers: { 'x-admin-senha': s }
+        })
+        .then(res => {
+            if (res.ok) {
+                SENHA = s;
+                document.getElementById('login-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('app').style.display = 'block';
+                    verificarStatus();
+                    carregarProdutos();
+                }, 300);
+            } else {
+                document.getElementById('login-erro').textContent = 'Senha incorreta. Tente novamente.';
+            }
+        })
+        .catch(() => {
+            document.getElementById('login-erro').textContent = 'Erro de conexão. Verifique se o servidor está online.';
+        });
     }
-    resetForm();
-    loadDashboard();
-  } catch (err) {
-    showToast(err.message, 'erro');
-  } finally {
-    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span id="btn-salvar-txt">Salvar Produto</span>';
-    btn.disabled = false;
-  }
-}
 
-function resetForm() {
-  document.getElementById('form-title').textContent = 'Novo Produto';
-  document.getElementById('form-subtitle').textContent = 'Preencha os dados e adicione fotos.';
-  document.getElementById('edit-id').value = '';
-  document.getElementById('f-nome').value = '';
-  document.getElementById('f-desc').value = '';
-  document.getElementById('f-preco').value = '';
-  document.getElementById('f-original').value = '';
-  document.getElementById('f-desconto').value = '';
-  document.getElementById('btn-salvar-txt').textContent = 'Salvar Produto';
-  fotosBase64 = [];
-  renderFotoPreview();
-}
+    function sair() {
+        SENHA = '';
+        location.reload();
+    }
 
-/*************  v29c13f6-f14d-4ba9-9e8c-8434b92b6eb4  *************/function calcDesconto() {
-  const preco  = parseFloat(document.getElementById('f-preco').value.replace(',','.'));
-  const orig   = parseFloat(document.getElementById('f-original').value.replace(',','.'));
-  if (!preco || !orig || orig <= preco) { showToast('Preencha preço real e preço "de" primeiro.', 'info'); return; }
-  const pct = Math.round((1 - preco/orig)*100);
-  document.getElementById('f-desconto').value = `${pct}% OFF`;
-  showToast(`Badge calculated: ${pct}% OFF`);
-}
+    // ── STATUS ───────────────────────────────────────────────────
+    function verificarStatus() {
+        fetch(`${API}/api/health`)
+            .then(r => r.json())
+            .then(d => {
+                const ok = d.status === 'ok';
+                document.getElementById('status-dot').className = ok ? 'ok' : 'err';
+                document.getElementById('status-txt').textContent = ok
+                    ? `✓ Servidor online — Banco de dados conectado`
+                    : `✗ Problema no banco de dados`;
+            })
+            .catch(() => {
+                document.getElementById('status-dot').className = 'err';
+                document.getElementById('status-txt').textContent = '✗ Servidor offline ou inacessível';
+            });
+    }
 
-// ============================================================
-// FOTOS
-// ============================================================
-function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-area').classList.add('drag-over'); }
-function handleDragLeave()  { document.getElementById('drop-area').classList.remove('drag-over'); }
-function handleDrop(e) {
-  e.preventDefault();
-  handleDragLeave();
-  handleFiles(e.dataTransfer.files);
-}
+    // ── CARREGAR PRODUTOS ────────────────────────────────────────
+    function carregarProdutos() {
+        document.getElementById('lista-produtos').innerHTML =
+            '<div class="estado">Carregando produtos...</div>';
 
-// ============================================================
-// IMPORTAR JSON
-// ============================================================
-async function importarJSON() {
-  const raw = document.getElementById('import-json').value.trim();
-  if (!raw) { showToast('Cole o JSON antes de importar.', 'info'); return; }
-  let lista;
-  try { lista = JSON.parse(raw); } catch { showToast('JSON inválido. Verifique a formatação.', 'erro'); return; }
-  try {
-    const res = await apiFetch('/api/admin/importar', 'POST', lista);
-    showToast(`? ${res.importados} produto(s) importados!`);
-    document.getElementById('import-json').value = '';
-    loadDashboard();
-  } catch (err) { showToast(err.message, 'erro'); }
-}
+        fetch(`${API}/api/admin/produtos`, {
+            headers: { 'x-admin-senha': SENHA }
+        })
+        .then(r => {
+            if (!r.ok) throw new Error('Sem autorização');
+            return r.json();
+        })
+        .then(produtos => {
+            todosOsProdutos = produtos;
+            renderizar(produtos);
+        })
+        .catch(err => {
+            document.getElementById('lista-produtos').innerHTML =
+                `<div class="estado">❌ Erro ao carregar: ${err.message}<p>Verifique se o servidor Railway está online.</p></div>`;
+        });
+    }
 
-// ============================================================
-// API HELPER
-// ============================================================
-async function apiFetch(url, method = 'GET', body = null) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json', 'x-admin-senha': SENHA },
-  };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(`${BASE_URL}${url}`, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.erro || `Erro ${res.status}`);
-  return data;
-}
+    // ── RENDERIZAR ───────────────────────────────────────────────
+    function renderizar(lista) {
+        const cont = document.getElementById('lista-produtos');
 
-// ============================================================
-// TOAST
-// ============================================================
-let _tt;
-function showToast(msg, tipo = 'ok') {
-  clearTimeout(_tt);
-  const t    = document.getElementById('toast');
-  const icon = document.getElementById('toast-icon');
-  document.getElementById('toast-msg').textContent = msg;
-  icon.className = tipo === 'erro'
-    ? 'fa-solid fa-circle-exclamation text-red-400 text-lg'
-    : tipo === 'info'
-    ? 'fa-solid fa-circle-info text-blue-400 text-lg'
-    : 'fa-solid fa-circle-check text-brand text-lg';
-  t.classList.remove('translate-y-24','opacity-0','pointer-events-none');
-  t.classList.add('translate-y-0','opacity-100');
-  _tt = setTimeout(() => {
-    t.classList.add('translate-y-24','opacity-0','pointer-events-none');
-    t.classList.remove('translate-y-0','opacity-100');
-  }, 3500);
-}
+        if (!lista.length) {
+            cont.innerHTML = '<div class="estado">Nenhum produto cadastrado ainda.<p>Use o endpoint de importação para adicionar produtos.</p></div>';
+            return;
+        }
 
-function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
+        cont.innerHTML = lista.map(p => {
+            const foto = p.fotos && p.fotos.length
+                ? `<img class="produto-foto" src="${p.fotos[0]}" alt="${p.nome}">`
+                : `<div class="produto-foto-placeholder">👗</div>`;
+
+            const badgeDesc = p.desconto
+                ? `<span class="badge">${p.desconto}</span>`
+                : '';
+
+            return `
+            <div class="produto" id="card-${p.id}">
+                ${foto}
+                <div class="produto-info">
+                    <div class="produto-nome">${p.nome}</div>
+                    <div class="produto-desc">${p.descricao || '—'}</div>
+                    <div class="preco-row">
+                        <span class="preco-label">R$</span>
+                        <input class="preco-input" id="preco-${p.id}"
+                               value="${p.preco}" placeholder="299,90"
+                               title="Preço atual">
+                        <input class="original-input" id="original-${p.id}"
+                               value="${p.preco_original || ''}" placeholder="De: (opcional)"
+                               title="Preço riscado (De:)">
+                        <input class="desconto-input" id="desconto-${p.id}"
+                               value="${p.desconto || ''}" placeholder="20% OFF"
+                               title="Badge de desconto">
+                        ${badgeDesc}
+                        <button class="btn-salvar" id="btn-${p.id}"
+                                onclick="salvar(${p.id})">
+                            Salvar
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ── FILTRAR ──────────────────────────────────────────────────
+    function filtrar(q) {
+        const lista = q.trim()
+            ? todosOsProdutos.filter(p => p.nome.toLowerCase().includes(q.toLowerCase()))
+            : todosOsProdutos;
+        renderizar(lista);
+    }
+
+    // ── SALVAR PRODUTO ───────────────────────────────────────────
+    function salvar(id) {
+        const preco    = document.getElementById(`preco-${id}`).value.trim();
+        const original = document.getElementById(`original-${id}`).value.trim();
+        const desconto = document.getElementById(`desconto-${id}`).value.trim();
+
+        if (!preco) { toast('Preencha o preço!', true); return; }
+
+        const btn = document.getElementById(`btn-${id}`);
+        btn.disabled  = true;
+        btn.textContent = '...';
+        btn.classList.add('salvando');
+
+        fetch(`${API}/api/admin/produtos/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-senha': SENHA
+            },
+            body: JSON.stringify({
+                preco,
+                preco_original: original || null,
+                desconto: desconto || null
+            })
+        })
+        .then(r => {
+            if (!r.ok) throw new Error(`Erro ${r.status}`);
+            return r.json();
+        })
+        .then(() => {
+            toast(`✓ "${todosOsProdutos.find(p=>p.id===id)?.nome || 'Produto'}" atualizado!`);
+            // Atualiza o cache local
+            const idx = todosOsProdutos.findIndex(p => p.id === id);
+            if (idx !== -1) {
+                todosOsProdutos[idx].preco          = preco;
+                todosOsProdutos[idx].preco_original = original || null;
+                todosOsProdutos[idx].desconto       = desconto || null;
+            }
+        })
+        .catch(err => {
+            toast(`Erro ao salvar: ${err.message}`, true);
+        })
+        .finally(() => {
+            btn.disabled    = false;
+            btn.textContent = 'Salvar';
+            btn.classList.remove('salvando');
+        });
+    }
+
+    // ── TOAST ────────────────────────────────────────────────────
+    let _tt;
+    function toast(msg, erro = false) {
+        clearTimeout(_tt);
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.className   = 'show' + (erro ? ' erro' : '');
+        _tt = setTimeout(() => { t.className = ''; }, 3500);
+    }
 </script>
 </body>
 </html>
