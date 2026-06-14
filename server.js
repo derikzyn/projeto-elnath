@@ -1,5 +1,5 @@
 // ============================================================
-// server.js — Backend Lingerie Esquenta (CORRIGIDO)
+// server.js — Backend Lingerie Esquenta
 // Deploy: Railway  |  Node.js + Express + PostgreSQL
 // ============================================================
 
@@ -16,7 +16,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// CORREÇÃO: Agora aponta para a raiz do projeto, onde estão seus HTMLs
+// Serve os arquivos estáticos da raiz (como imagens, CSS, etc.)
 app.use(express.static(__dirname));
 
 // ── Conexão com o banco ──────────────────────────────────────
@@ -87,7 +87,7 @@ app.put('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   const { nome, descricao, preco, preco_original, desconto, fotos, ativo } = req.body;
   try {
     const { rows } = await pool.query(
-      `UPDATE produtos SET nome = COALESCE($1, nome), descricao = COALESCE($2, descricao), preco = COALESCE($3, preco), preco_original = $4, desconto = $5, fotos = COALESCE($6, fotos), ativo = COALESCE($7, ativo), atualizado_em = NOW() WHERE id = $8 RETURNING *`,
+      `UPDATE produtos SET nome = COALESCE($1, nome), descricao = COALESCE($2, descricao), preco = COALESCE($3, preco), preco_original = $4, desconto = $5, fotos = COALESCE($6, fotos), ativo = COALESCE($7, ativo), updated_at = NOW() WHERE id = $8 RETURNING *`,
       [nome, descricao, preco, preco_original, desconto, fotos, ativo, id]
     );
     if (!rows.length) return res.status(404).json({ erro: 'Produto não encontrado.' });
@@ -104,8 +104,13 @@ app.delete('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ erro: 'Erro' }); }
 });
 
+// ── ROTA DO PAINEL ADMIN (Cria o caminho /admin sem precisar do .html) ──
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
 // ── Fallback ────────────────────────────────────────────────
-// CORREÇÃO: Serve o index.html da raiz
+// Redireciona qualquer outra rota digitada para a página inicial da loja
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
