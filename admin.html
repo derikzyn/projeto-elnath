@@ -26,7 +26,6 @@ html{scroll-behavior:smooth;}
 </head>
 <body class="bg-gray-100 font-sans min-h-screen">
 
-<!-- ===== LOGIN ===== -->
 <div id="login-screen" class="fixed inset-0 z-50 bg-brandDark flex items-center justify-center p-4">
   <div class="bg-white rounded-3xl p-10 w-full max-w-sm shadow-2xl text-center">
     <div class="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -39,17 +38,14 @@ html{scroll-behavior:smooth;}
     <button onclick="doLogin()" class="w-full py-3 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-brand transition">
       Entrar <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
     </button>
-    <p id="login-error" class="text-red-500 text-xs mt-3 hidden">Senha incorrecta. Tente novamente.</p>
+    <p id="login-error" class="text-red-500 text-xs mt-3 hidden">Senha incorreta. Tente novamente.</p>
   </div>
 </div>
 
-<!-- ===== MAIN APP (hidden until login) ===== -->
 <div id="app" class="hidden min-h-screen">
 
-  <!-- SIDEBAR -->
   <div class="flex h-screen overflow-hidden">
     <aside class="w-64 bg-brandDark text-white flex flex-col shrink-0">
-      <!-- Logo -->
       <div class="p-6 border-b border-white/10">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 bg-brand/20 rounded-xl flex items-center justify-center">
@@ -62,7 +58,6 @@ html{scroll-behavior:smooth;}
         </div>
       </div>
 
-      <!-- Nav -->
       <nav class="flex-grow p-4 space-y-1">
         <button onclick="showTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 transition text-left">
           <i class="fa-solid fa-chart-line w-4"></i> Dashboard
@@ -78,7 +73,6 @@ html{scroll-behavior:smooth;}
         </button>
       </nav>
 
-      <!-- Footer -->
       <div class="p-4 border-t border-white/10">
         <a href="/" target="_blank" class="flex items-center gap-2 px-4 py-2 text-xs text-white/50 hover:text-white transition">
           <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver Site
@@ -89,10 +83,8 @@ html{scroll-behavior:smooth;}
       </div>
     </aside>
 
-    <!-- CONTENT AREA -->
     <main class="flex-grow overflow-y-auto bg-gray-50">
 
-      <!-- ── DASHBOARD ── -->
       <div id="tab-dashboard" class="tab-content p-8">
         <h2 class="font-serif text-3xl font-bold mb-2">Dashboard</h2>
         <p class="text-gray-500 text-sm mb-8">Visão geral da loja.</p>
@@ -131,7 +123,6 @@ html{scroll-behavior:smooth;}
             </div>
           </div>
         </div>
-        <!-- Quick actions -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
           <h3 class="font-semibold text-sm mb-4 uppercase tracking-wider text-gray-500">Ações Rápidas</h3>
           <div class="flex flex-wrap gap-3">
@@ -148,7 +139,6 @@ html{scroll-behavior:smooth;}
         </div>
       </div>
 
-      <!-- ── LISTA DE PRODUTOS ── -->
       <div id="tab-produtos" class="tab-content hidden p-8">
         <div class="flex items-center justify-between mb-6">
           <div>
@@ -160,7 +150,6 @@ html{scroll-behavior:smooth;}
           </button>
         </div>
 
-        <!-- Search + filter -->
         <div class="flex gap-3 mb-6">
           <div class="relative flex-grow">
             <input id="search-prod" type="text" placeholder="Buscar por nome…" oninput="filterProdutos(this.value)"
@@ -180,16 +169,13 @@ html{scroll-behavior:smooth;}
         </div>
       </div>
 
-      <!-- ── NOVO / EDITAR PRODUTO ── -->
       <div id="tab-novo" class="tab-content hidden p-8">
         <h2 class="font-serif text-3xl font-bold mb-1" id="form-title">Novo Produto</h2>
         <p class="text-gray-500 text-sm mb-8" id="form-subtitle">Preencha os dados e adicione fotos.</p>
 
         <div class="max-w-2xl space-y-6">
-          <!-- hidden edit id -->
           <input type="hidden" id="edit-id">
 
-          <!-- Nome -->
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
             <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Informações</h3>
             <div>
@@ -204,7 +190,6 @@ html{scroll-behavior:smooth;}
             </div>
           </div>
 
-          <!-- Preços -->
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
             <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Preços</h3>
             <div class="grid grid-cols-2 gap-4">
@@ -237,14 +222,12 @@ html{scroll-behavior:smooth;}
             </div>
           </div>
 
-          <!-- Fotos -->
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
             <div class="flex items-center justify-between">
               <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Fotos (máx. 5)</h3>
               <span class="text-xs text-gray-400" id="foto-count">0 foto(s)</span>
             </div>
 
-            <!-- Upload area -->
             <div id="drop-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
               class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center cursor-pointer hover:border-brand transition"
               onclick="document.getElementById('foto-input').click()">
@@ -254,11 +237,9 @@ html{scroll-behavior:smooth;}
               <input type="file" id="foto-input" accept="image/*" multiple class="hidden" onchange="handleFiles(this.files)">
             </div>
 
-            <!-- Preview -->
             <div id="foto-preview" class="flex gap-3 flex-wrap"></div>
           </div>
 
-          <!-- Save button -->
           <div class="flex gap-3">
             <button onclick="salvarProduto()" id="btn-salvar"
               class="flex-1 py-4 bg-brandDark hover:bg-brand text-white font-bold text-sm uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2">
@@ -271,7 +252,6 @@ html{scroll-behavior:smooth;}
         </div>
       </div>
 
-      <!-- ── IMPORTAR JSON ── -->
       <div id="tab-importar" class="tab-content hidden p-8">
         <h2 class="font-serif text-3xl font-bold mb-1">Importar Produtos</h2>
         <p class="text-gray-500 text-sm mb-8">Cole um array JSON de produtos para importar de uma vez.</p>
@@ -301,19 +281,16 @@ html{scroll-behavior:smooth;}
   </div>
 </div>
 
-<!-- ── MODAL EDITAR ── -->
 <div id="edit-modal" class="fixed inset-0 z-50 modal-overlay hidden flex items-center justify-center p-4">
   <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[92vh] relative">
     <button onclick="closeEditModal()" class="absolute top-4 right-4 w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 transition">
       <i class="fa-solid fa-xmark"></i>
     </button>
     <div class="p-8" id="edit-modal-content">
-      <!-- populated by JS -->
-    </div>
+      </div>
   </div>
 </div>
 
-<!-- TOAST -->
 <div id="toast" class="fixed bottom-6 right-6 z-[60] bg-brandDark text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 translate-y-24 opacity-0 pointer-events-none border border-brand/30">
   <i id="toast-icon" class="fa-solid fa-circle-check text-brand text-lg"></i>
   <span id="toast-msg" class="text-sm font-semibold"></span>
@@ -321,22 +298,22 @@ html{scroll-behavior:smooth;}
 
 <script>
 // ============================================================
-// CONFIG
+// CONFIGURAÇÃO GERAL
 // ============================================================
 const BASE_URL = 'https://projeto-elnath-production.up.railway.app';
 let SENHA = '';
-let todosOsProdutos = []; // cache local
-let fotosBase64 = [];     // fotos do form atual
+let todosOsProdutos = [];
+let fotosBase64 = [];
 
 // ============================================================
-// LOGIN
+// LOGIN E AUTENTICAÇÃO
 // ============================================================
 function doLogin() {
   const inp = document.getElementById('senha-input').value.trim();
   if (!inp) return;
-  // Test against API
+  
   fetch(`${BASE_URL}/api/admin/produtos`, { headers: { 'x-admin-senha': inp } })
-    .then(res => {
+    .then(async res => {
       if (res.ok) {
         SENHA = inp;
         document.getElementById('login-screen').style.opacity = '0';
@@ -347,11 +324,12 @@ function doLogin() {
           loadDashboard();
         }, 300);
       } else {
+        document.getElementById('login-error').textContent = 'Senha incorreta. Tente novamente.';
         document.getElementById('login-error').classList.remove('hidden');
       }
     })
     .catch(() => {
-      document.getElementById('login-error').textContent = 'Erro de conexão. Verifique o servidor.';
+      document.getElementById('login-error').textContent = 'Erro ao conectar ao Railway. O servidor pode estar dormindo.';
       document.getElementById('login-error').classList.remove('hidden');
     });
 }
@@ -362,7 +340,7 @@ function doLogout() {
 }
 
 // ============================================================
-// TABS
+// SISTEMA DE ABAS (TABS)
 // ============================================================
 function showTab(tab) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
@@ -380,7 +358,6 @@ function showTab(tab) {
 // DASHBOARD
 // ============================================================
 async function loadDashboard() {
-  // Health check
   try {
     const h = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
     document.getElementById('dash-db-status').textContent = h.db === 'conectado' ? '✅ Conectado' : '❌ Desconectado';
@@ -389,7 +366,6 @@ async function loadDashboard() {
     document.getElementById('dash-db-status').textContent = '❌ Servidor offline';
     document.getElementById('dash-db-status').className = 'text-sm font-bold text-red-500';
   }
-  // Products count
   try {
     const ps = await apiFetch('/api/admin/produtos');
     const ativos = ps.filter(p => p.ativo);
@@ -400,7 +376,7 @@ async function loadDashboard() {
 }
 
 // ============================================================
-// PRODUTOS LIST
+// GERENCIAMENTO DE PRODUTOS
 // ============================================================
 async function loadProdutos() {
   const cont = document.getElementById('prod-list');
@@ -462,7 +438,7 @@ function filterProdutos(q) {
 }
 
 // ============================================================
-// CRUD
+// ACOES CRUD
 // ============================================================
 async function toggleAtivo(id, ativo) {
   try {
@@ -486,7 +462,7 @@ async function excluirProduto(id, nome) {
 function editarProduto(id) {
   const p = todosOsProdutos.find(x => x.id === id);
   if (!p) return;
-  // Populate form and switch to tab-novo
+  
   document.getElementById('form-title').textContent = 'Editar Produto';
   document.getElementById('form-subtitle').textContent = `Editando: ${p.nome}`;
   document.getElementById('edit-id').value = p.id;
@@ -497,15 +473,14 @@ function editarProduto(id) {
   document.getElementById('f-desconto').value = p.desconto || '';
   document.getElementById('btn-salvar-txt').textContent = 'Atualizar Produto';
 
-  // Reload existing photos
   fotosBase64 = p.fotos || [];
   renderFotoPreview();
-
   showTab('novo');
 }
 
 async function salvarProduto() {
-  const id    document.getElementById('edit-id').value;
+  // ATENÇÃO: O erro da variável id sem o sinal de igual foi corrigido!
+  const id    = document.getElementById('edit-id').value;
   const nome  = document.getElementById('f-nome').value.trim();
   const desc  = document.getElementById('f-desc').value.trim();
   const preco = document.getElementById('f-preco').value.trim();
@@ -552,17 +527,17 @@ function resetForm() {
   renderFotoPreview();
 }
 
-/*************  v29c13f6-f14d-4ba9-9e8c-8434b92b6eb4  *************/function calcDesconto() {
+function calcDesconto() {
   const preco  = parseFloat(document.getElementById('f-preco').value.replace(',','.'));
   const orig   = parseFloat(document.getElementById('f-original').value.replace(',','.'));
   if (!preco || !orig || orig <= preco) { showToast('Preencha preço real e preço "de" primeiro.', 'info'); return; }
   const pct = Math.round((1 - preco/orig)*100);
   document.getElementById('f-desconto').value = `${pct}% OFF`;
-  showToast(`Badge calculated: ${pct}% OFF`);
+  showToast(`Desconto calculado: ${pct}% OFF`);
 }
 
 // ============================================================
-// FOTOS
+// TRATAMENTO DE FOTOS
 // ============================================================
 function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-area').classList.add('drag-over'); }
 function handleDragLeave()  { document.getElementById('drop-area').classList.remove('drag-over'); }
@@ -572,24 +547,59 @@ function handleDrop(e) {
   handleFiles(e.dataTransfer.files);
 }
 
+function handleFiles(files) {
+  const remaining = 5 - fotosBase64.length;
+  if (remaining <= 0) { showToast('Máximo de 5 fotos atingido.', 'info'); return; }
+  Array.from(files).slice(0, remaining).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5*1024*1024) { showToast(`"${file.name}" é muito grande (max 5MB).`, 'erro'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+      fotosBase64.push(e.target.result);
+      renderFotoPreview();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderFotoPreview() {
+  const prev = document.getElementById('foto-preview');
+  document.getElementById('foto-count').textContent = `${fotosBase64.length} foto(s)`;
+  prev.innerHTML = fotosBase64.map((src, i) => `
+    <div class="relative group">
+      <img src="${src}" class="thumb" alt="Foto ${i+1}">
+      <button onclick="removerFoto(${i})"
+        class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+        ✕
+      </button>
+      ${i===0?'<span class="absolute bottom-0.5 left-0.5 text-[9px] bg-black/60 text-white px-1 rounded font-bold">CAPA</span>':''}
+    </div>
+  `).join('');
+}
+
+function removerFoto(i) {
+  fotosBase64.splice(i, 1);
+  renderFotoPreview();
+}
+
 // ============================================================
-// IMPORTAR JSON
+// IMPORTAÇÃO JSON
 // ============================================================
 async function importarJSON() {
   const raw = document.getElementById('import-json').value.trim();
   if (!raw) { showToast('Cole o JSON antes de importar.', 'info'); return; }
   let lista;
-  try { lista = JSON.parse(raw); } catch { showToast('JSON inválido. Verifique a formatação.', 'erro'); return; }
+  try { lista = JSON.parse(raw); } catch { showToast('JSON inválido. Verifique se copiou corretamente.', 'erro'); return; }
   try {
     const res = await apiFetch('/api/admin/importar', 'POST', lista);
-    showToast(`? ${res.importados} produto(s) importados!`);
+    showToast(`✅ ${res.importados} produto(s) importados!`);
     document.getElementById('import-json').value = '';
     loadDashboard();
   } catch (err) { showToast(err.message, 'erro'); }
 }
 
 // ============================================================
-// API HELPER
+// API FETCH (BLINDADO CONTRA ERRO JSON)
 // ============================================================
 async function apiFetch(url, method = 'GET', body = null) {
   const opts = {
@@ -597,14 +607,27 @@ async function apiFetch(url, method = 'GET', body = null) {
     headers: { 'Content-Type': 'application/json', 'x-admin-senha': SENHA },
   };
   if (body) opts.body = JSON.stringify(body);
+  
+  // Realiza a chamada pro Railway
   const res = await fetch(`${BASE_URL}${url}`, opts);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.erro || `Erro ${res.status}`);
+  
+  // Lê a resposta do servidor em formato de texto cru primeiro para evitar o "SyntaxError"
+  const rawText = await res.text();
+  let data;
+  
+  try {
+    data = JSON.parse(rawText);
+  } catch (err) {
+    console.error("Resposta do servidor não foi um JSON válido:", rawText);
+    throw new Error(`Erro no servidor (Status: ${res.status}). Verifique o log do Railway.`);
+  }
+
+  if (!res.ok) throw new Error(data.erro || `Falha na requisição (Erro ${res.status})`);
   return data;
 }
 
 // ============================================================
-// TOAST
+// UTILITÁRIOS
 // ============================================================
 let _tt;
 function showToast(msg, tipo = 'ok') {
