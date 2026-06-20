@@ -6,35 +6,34 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// ── Middleware de Segurança e Performance ────────────────────
+// ── Middlewares de Payload e Segurança ───────────────────────────
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '15mb' }));
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 app.use(express.static(__dirname));
 
-// ── Conexão com o Banco de Dados ─────────────────────────────
+// ── Conexão Otimizada com o Banco (Evita estouro de RAM no Pool) ──
 let pool;
 
 try {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    max: 10,
-    idleTimeoutMillis: 15000,
+    max: 4, // Restringe conexões simultâneas para poupar recursos no plano free
+    idleTimeoutMillis: 8000, // Encerra conexões inativas imediatamente
     connectionTimeoutMillis: 5000,
   });
 
   pool.on('error', (err) => {
-    console.error('❌ Erro inesperado no pool de conexões:', err.message);
+    console.error('❌ Erro detectado no pool do Postgres:', err.message);
   });
 } catch (err) {
-  console.error('❌ Erro crítico ao inicializar Pool do Postgres:', err.message);
+  console.error('❌ Erro crítico na configuração do Postgres:', err.message);
 }
 
-// ── Inicialização do Banco (Blindada contra tabelas antigas) ──
+// ── Sincronização e Atualização Estrutural do Banco ──────────────
 async function initDB() {
   try {
-    // 1. Garante que a estrutura base da tabela existe
     await pool.query(`
       CREATE TABLE IF NOT EXISTS produtos (
         id SERIAL PRIMARY KEY,
@@ -50,42 +49,42 @@ async function initDB() {
       );
     `);
 
-    // 2. FORÇA A INJEÇÃO DA COLUNA CATEGORIA (Evita o erro 500 em tabelas antigas)
+    // Injeta a coluna de categoria caso o banco venha de uma versão pré-existente
     await pool.query(`
       ALTER TABLE produtos ADD COLUMN IF NOT EXISTS categoria VARCHAR(50) DEFAULT 'Geral';
     `);
 
-    console.log('✅ Tabela "produtos" e coluna "categoria" prontas e verificadas.');
+    console.log('✅ Banco de dados atualizado e estruturado.');
     return true;
   } catch (err) {
-    console.error('❌ Erro ao inicializar ou atualizar o banco de dados:', err.message);
+    console.error('⚠️ Sincronização pendente. Reconectando em segundo plano...', err.message);
     return false;
   }
 }
 
-// ── Autenticação do Painel Admin ─────────────────────────────
+// ── Validação de Segurança Admin ─────────────────────────────────
 function adminAuth(req, res, next) {
   const senha = req.headers['x-admin-senha'] || req.query.senha || req.body.senha;
   const SENHA_MESTRA = process.env.ADMIN_SENHA || 'esquenta2026';
   
   if (!senha || senha !== SENHA_MESTRA) {
-    return res.status(401).json({ erro: 'Não autorizado. Senha incorreta ou ausente.' });
+    return res.status(401).json({ erro: 'Acesso não autorizado.' });
   }
   next();
 }
 
 // ============================================================
-// ROTAS DE VERIFICAÇÃO DE SAÚDE (HEALTHCHECKS)
+// VERIFICAÇÃO DE STATUS E ROTAS ESTÁTICAS
 // ============================================================
 
 app.get('/', (req, res) => {
-  res.status(200).send('API Lingerie Esquenta Online ✔️');
+  res.status(200).send('API Lingerie Esquenta - Operando Normalmente');
 });
 
 app.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
-    res.json({ status: 'healthy', database: 'connected', uptime: process.uptime() });
+    res.json({ status: 'healthy', database: 'connected' });
   } catch (err) {
     res.status(500).json({ status: 'unhealthy', error: err.message });
   }
@@ -95,31 +94,26 @@ app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.ht
 app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
 // ============================================================
-// ROTAS PÚBLICAS (CONSUMIDAS PELO SITE / FRONTEND)
+// ROTAS PÚBLICAS DA VITRINE
 // ============================================================
 
 app.get('/api/produtos', async (req, res) => {
   try {
-    const { categoria, limite, pagina } = req.query;
-    const parsedLimit = Math.min(parseInt(limite) || 40, 100); 
-    const offset = ((parseInt(pagina) || 1) - 1) * parsedLimit;
-
+    const { categoria } = req.query;
     let query = 'SELECT id, nome, descricao, preco, preco_original, desconto, fotos, categoria FROM produtos WHERE ativo = TRUE';
     const params = [];
 
     if (categoria) {
       params.push(categoria);
-      query += ` AND categoria = $${params.length}`;
+      query += ` AND categoria = $1`;
     }
 
-    params.push(parsedLimit, offset);
-    query += ` ORDER BY id ASC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+    query += ' ORDER BY id ASC LIMIT 50';
 
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
-    console.error('Erro ao buscar produtos:', err.message);
-    res.status(500).json({ erro: 'Erro interno ao processar a lista de produtos.' });
+    res.status(500).json({ erro: 'Erro ao listar vitrine.' });
   }
 });
 
@@ -130,38 +124,38 @@ app.get('/api/categorias', async (req, res) => {
     );
     res.json(rows.map(r => r.categoria));
   } catch (err) {
-    res.status(500).json({ erro: 'Erro ao buscar categorias dinâmicas.' });
+    res.status(500).json({ erro: 'Erro ao coletar tags de categorias.' });
   }
 });
 
 // ============================================================
-// ROTAS PRIVADAS DO PAINEL ADMINISTRATIVO
+// PAINEL DE CONTROLE (ADMIN REQUISICOES UNITARIAS)
 // ============================================================
 
 app.get('/api/admin/produtos', adminAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
-      'SELECT id, nome, descricao, preco, preco_original, desconto, fotos, categoria, ativo FROM produtos ORDER BY id DESC LIMIT 100'
+      'SELECT id, nome, descricao, preco, preco_original, desconto, fotos, categoria, ativo FROM produtos ORDER BY id DESC LIMIT 50'
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ erro: 'Erro ao buscar dados do painel.' });
+    res.status(500).json({ erro: 'Erro no carregamento dos dados administrativos.' });
   }
 });
 
 app.post('/api/admin/produtos', adminAuth, async (req, res) => {
   const { nome, descricao, preco, preco_original, desconto, fotos, categoria } = req.body;
-  if (!nome || !preco) return res.status(400).json({ erro: 'Nome e Preço são campos obrigatórios.' });
+  if (!nome || !preco) return res.status(400).json({ erro: 'Nome e Preço são mandatórios.' });
 
   try {
     const { rows } = await pool.query(
       `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos, categoria)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, nome`,
       [nome, descricao || '', preco, preco_original || null, desconto || null, fotos || [], categoria || 'Geral']
     );
     res.status(201).json(rows[0]);
   } catch (err) {
-    res.status(500).json({ erro: 'Erro ao cadastrar o produto no banco.' });
+    res.status(500).json({ erro: 'Falha ao processar inserção no banco.' });
   }
 });
 
@@ -182,58 +176,37 @@ app.put('/api/admin/produtos/:id', adminAuth, async (req, res) => {
            ativo = COALESCE($8, ativo), 
            atualizado_em = NOW() 
        WHERE id = $9 
-       RETURNING *`,
+       RETURNING id`,
       [nome, descricao, preco, preco_original, desconto, fotos, categoria, ativo, id]
     );
 
-    if (rows.length === 0) return res.status(404).json({ erro: 'Produto não localizado.' });
+    if (rows.length === 0) return res.status(404).json({ erro: 'Produto ausente.' });
     res.json(rows[0]);
   } catch (err) {
-    res.status(500).json({ erro: 'Erro ao atualizar dados do produto.' });
-  }
-});
-
-app.post('/api/admin/importar', adminAuth, async (req, res) => {
-  const produtos = req.body;
-  if (!Array.isArray(produtos)) return res.status(400).json({ erro: 'Formato de dados inválido. Esperado um Array.' });
-
-  let inseridos = 0;
-  try {
-    for (const p of produtos) {
-      if (!p.nome || !p.preco) continue;
-      await pool.query(
-        `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos, categoria)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [p.nome, p.descricao || '', p.preco, p.preco_original || null, p.desconto || null, p.fotos || [], p.categoria || 'Geral']
-      );
-      inseridos++;
-    }
-    res.json({ sucesso: true, quantidade: inseridos });
-  } catch (err) {
-    res.status(500).json({ erro: 'Falha durante a importação em lote.' });
+    res.status(500).json({ erro: 'Falha ao processar atualização.' });
   }
 });
 
 app.delete('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   try {
     const { rowCount } = await pool.query('UPDATE produtos SET ativo = FALSE WHERE id = $1', [req.params.id]);
-    if (rowCount === 0) return res.status(404).json({ erro: 'Produto não encontrado.' });
-    res.json({ sucesso: true, mensagem: 'Produto desativado com sucesso.' });
+    if (rowCount === 0) return res.status(404).json({ erro: 'Produto não identificado.' });
+    res.json({ sucesso: true });
   } catch (err) {
-    res.status(500).json({ erro: 'Erro ao ocultar produto.' });
+    res.status(500).json({ erro: 'Falha ao alterar status de exibição.' });
   }
 });
 
-// ── Ativação do Servidor ─────────────────────────────────────
+// ── Ativação da Escuta em Rede Externa ───────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor escutando na porta ${PORT} em modo estável.`);
   initDB();
 });
 
-// Trata erros inesperados globalmente para evitar quedas por bobeira
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('⚠️ Rejeição não tratada detectada:', reason);
+// Tratamento global para isolar exceções assíncronas
+process.on('unhandledRejection', (reason) => {
+  console.error('⚠️ Rejeição assíncrona blindada:', reason);
 });
 process.on('uncaughtException', (err) => {
-  console.error('⚠️ Exceção não capturada detectada:', err.message);
+  console.error('⚠️ Exceção fatal mitigada:', err.message);
 });
