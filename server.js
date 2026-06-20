@@ -218,7 +218,7 @@ app.delete('/api/admin/produtos/:id', adminAuth, async (req, res) => {
 });
 
 // ── Start do Servidor sem travar ─────────────────────────────
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   initDB(); // Roda a checagem do banco em segundo plano
 });
