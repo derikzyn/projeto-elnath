@@ -1,6 +1,7 @@
 const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,71 +10,122 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.static(__dirname));
 
 // ── Conexão com o banco ──────────────────────────────────────
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
+let pool;
+
+try {
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 2000,
+  });
+
+  pool.on('error', (err) => {
+    console.error('❌ Erro no pool de conexão:', err);
+  });
+} catch (err) {
+  console.error('❌ Erro ao criar pool:', err);
+  process.exit(1);
+}
 
 // ── Cria a tabela ───────────────────────────────────────────
 async function initDB() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS produtos (
-      id SERIAL PRIMARY KEY,
-      nome TEXT NOT NULL,
-      descricao TEXT,
-      preco TEXT NOT NULL,
-      preco_original TEXT,
-      desconto TEXT,
-      fotos TEXT[],
-      ativo BOOLEAN DEFAULT TRUE,
-      criado_em TIMESTAMP DEFAULT NOW(),
-      atualizado_em TIMESTAMP DEFAULT NOW()
-    );
-  `);
-  console.log('✅ Tabela "produtos" pronta.');
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS produtos (
+        id SERIAL PRIMARY KEY,
+        nome TEXT NOT NULL,
+        descricao TEXT,
+        preco TEXT NOT NULL,
+        preco_original TEXT,
+        desconto TEXT,
+        fotos TEXT[],
+        categoria VARCHAR(50) DEFAULT 'Geral',
+        ativo BOOLEAN DEFAULT TRUE,
+        criado_em TIMESTAMP DEFAULT NOW(),
+        atualizado_em TIMESTAMP DEFAULT NOW()
+      );
+    `);
+    console.log('✅ Tabela "produtos" pronta.');
+    return true;
+  } catch (err) {
+    console.error('❌ Erro ao criar tabela:', err.message);
+    return false;
+  }
 }
 
 // ── Auth ────────────────────────────────────────────────────
 function adminAuth(req, res, next) {
-  const senha = req.headers['x-admin-senha'] || req.query.senha;
+  const senha = req.headers['x-admin-senha'] || req.query.senha || req.body.senha;
   const SENHA = process.env.ADMIN_SENHA || 'esquenta2026';
   if (senha !== SENHA) return res.status(401).json({ erro: 'Não autorizado.' });
   next();
 }
 
 // ============================================================
-// ROTAS NOVAS (As que faltaram e causaram o erro)
+// ROTAS ESTÁTICAS (SERVE FILES)
 // ============================================================
 
-// Rota de Health Check (para o painel mostrar "Conectado")
+app.get('/index.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+// ============================================================
+// ROTAS DE HEALTH CHECK E CONFIGURAÇÃO
+// ============================================================
+
+// Rota de Health Check
 app.get('/api/health', async (req, res) => {
   try {
-    await pool.query('SELECT 1');
-    res.json({ db: 'conectado', status: 'ok' });
+    const result = await pool.query('SELECT 1');
+    res.json({ db: 'conectado', status: 'ok', timestamp: new Date() });
   } catch (err) {
-    res.status(500).json({ db: 'erro', status: 'offline' });
+    console.error('Health check erro:', err.message);
+    res.status(500).json({ db: 'erro', status: 'offline', erro: err.message });
   }
 });
 
-// Rota de Importação (para o botão Importar JSON funcionar)
+// Rota de Importação de JSON
 app.post('/api/admin/importar', adminAuth, async (req, res) => {
   const produtos = req.body;
   if (!Array.isArray(produtos)) return res.status(400).json({ erro: 'Formato inválido. Array esperado.' });
 
   let importados = 0;
+  let erros = [];
+
   try {
     for (const p of produtos) {
-      if (!p.nome || !p.preco) continue; // Pula se faltar dados obrigatórios
-      await pool.query(
-        `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [p.nome, p.descricao || '', p.preco, p.preco_original || null, p.desconto || null, p.fotos || []]
-      );
-      importados++;
+      if (!p.nome || !p.preco) {
+        erros.push(`Produto ignorado: faltam dados obrigatórios`);
+        continue;
+      }
+      
+      const categoria = p.categoria || 'Geral';
+      
+      try {
+        await pool.query(
+          `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos, categoria)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [p.nome, p.descricao || '', p.preco, p.preco_original || null, p.desconto || null, p.fotos || [], categoria]
+        );
+        importados++;
+      } catch (insertErr) {
+        erros.push(`Erro ao inserir ${p.nome}: ${insertErr.message}`);
+      }
     }
-    res.json({ sucesso: true, importados });
+    
+    res.json({ 
+      sucesso: true, 
+      importados,
+      erros: erros.length > 0 ? erros : undefined
+    });
   } catch (err) {
     console.error('Erro na importação:', err);
     res.status(500).json({ erro: 'Erro ao importar produtos.' });
@@ -81,68 +133,147 @@ app.post('/api/admin/importar', adminAuth, async (req, res) => {
 });
 
 // ============================================================
-// RESTANTE DAS ROTAS CRUD
+// ROTAS CRUD PÚBLICAS
 // ============================================================
 
+// Listar todos os produtos ativos (públicos)
 app.get('/api/produtos', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM produtos WHERE ativo = TRUE ORDER BY id ASC');
+    const categoria = req.query.categoria;
+    let query = 'SELECT * FROM produtos WHERE ativo = TRUE';
+    const params = [];
+
+    if (categoria) {
+      query += ' AND categoria = $1';
+      params.push(categoria);
+      query += ' ORDER BY id ASC';
+    } else {
+      query += ' ORDER BY id ASC';
+    }
+
+    const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
+    console.error('Erro:', err);
     res.status(500).json({ erro: 'Erro ao buscar produtos.' });
   }
 });
 
-app.get('/api/admin/produtos', adminAuth, async (req, res) => {
-  try {
-    const { rows } = await pool.query('SELECT * FROM produtos ORDER BY id ASC');
-    res.json(rows);
-  } catch (err) {
-    res.status(500).json({ erro: 'Erro ao buscar produtos.' });
-  }
-});
-
-app.post('/api/admin/produtos', adminAuth, async (req, res) => {
-  const { nome, descricao, preco, preco_original, desconto, fotos } = req.body;
-  if (!nome || !preco) return res.status(400).json({ erro: 'nome e preco são obrigatórios.' });
+// Listar categorias disponíveis
+app.get('/api/categorias', async (req, res) => {
   try {
     const { rows } = await pool.query(
-      `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos)
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [nome, descricao || '', preco, preco_original || null, desconto || null, fotos || []]
+      `SELECT DISTINCT categoria FROM produtos WHERE ativo = TRUE ORDER BY categoria ASC`
+    );
+    res.json(rows.map(r => r.categoria));
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao buscar categorias.' });
+  }
+});
+
+// ============================================================
+// ROTAS ADMIN (PROTEGIDAS)
+// ============================================================
+
+// Listar todos os produtos (admin)
+app.get('/api/admin/produtos', adminAuth, async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM produtos ORDER BY id DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao buscar produtos.' });
+  }
+});
+
+// Criar produto
+app.post('/api/admin/produtos', adminAuth, async (req, res) => {
+  const { nome, descricao, preco, preco_original, desconto, fotos, categoria } = req.body;
+  if (!nome || !preco) return res.status(400).json({ erro: 'nome e preco são obrigatórios.' });
+  
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos, categoria)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [nome, descricao || '', preco, preco_original || null, desconto || null, fotos || [], categoria || 'Geral']
     );
     res.status(201).json(rows[0]);
   } catch (err) {
+    console.error('Erro:', err);
     res.status(500).json({ erro: 'Erro ao criar produto.' });
   }
 });
 
+// Atualizar produto
 app.put('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   const { id } = req.params;
-  const { nome, descricao, preco, preco_original, desconto, fotos, ativo } = req.body;
+  const { nome, descricao, preco, preco_original, desconto, fotos, ativo, categoria } = req.body;
+  
   try {
     const { rows } = await pool.query(
-      `UPDATE produtos SET nome = COALESCE($1, nome), descricao = COALESCE($2, descricao), preco = COALESCE($3, preco), preco_original = $4, desconto = $5, fotos = COALESCE($6, fotos), ativo = COALESCE($7, ativo), atualizado_em = NOW() WHERE id = $8 RETURNING *`,
-      [nome, descricao, preco, preco_original, desconto, fotos, ativo, id]
+      `UPDATE produtos 
+       SET nome = COALESCE($1, nome), 
+           descricao = COALESCE($2, descricao), 
+           preco = COALESCE($3, preco), 
+           preco_original = $4, 
+           desconto = $5, 
+           fotos = COALESCE($6, fotos), 
+           categoria = COALESCE($7, categoria),
+           ativo = COALESCE($8, ativo), 
+           atualizado_em = NOW() 
+       WHERE id = $9 
+       RETURNING *`,
+      [nome, descricao, preco, preco_original, desconto, fotos, categoria, ativo, id]
     );
+    
     if (!rows.length) return res.status(404).json({ erro: 'Produto não encontrado.' });
     res.json(rows[0]);
   } catch (err) {
+    console.error('Erro:', err);
     res.status(500).json({ erro: 'Erro ao atualizar.' });
   }
 });
 
+// Deletar produto (soft delete)
 app.delete('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   try {
-    await pool.query('UPDATE produtos SET ativo = FALSE WHERE id = $1', [req.params.id]);
-    res.json({ sucesso: true });
-  } catch (err) { res.status(500).json({ erro: 'Erro' }); }
+    const result = await pool.query('UPDATE produtos SET ativo = FALSE WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      return res.status(404).json({ erro: 'Produto não encontrado.' });
+    }
+    res.json({ sucesso: true, mensagem: 'Produto desativado com sucesso.' });
+  } catch (err) { 
+    res.status(500).json({ erro: 'Erro ao deletar' }); 
+  }
 });
 
 // ── Start ────────────────────────────────────────────────────
-initDB().then(() => {
-  app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-}).catch(err => {
-  console.error('❌ Falha ao inicializar:', err);
-  process.exit(1);
+async function start() {
+  try {
+    const dbReady = await initDB();
+    if (!dbReady) {
+      console.warn('⚠️ Banco não estava pronto, mas continuando...');
+    }
+    
+    app.listen(PORT, () => {
+      console.log(`🚀 Servidor rodando na porta ${PORT}`);
+      console.log(`📍 http://localhost:${PORT}`);
+      console.log(`📍 http://localhost:${PORT}/index.html`);
+      console.log(`📍 http://localhost:${PORT}/admin.html`);
+    });
+  } catch (err) {
+    console.error('❌ Erro ao iniciar:', err);
+    setTimeout(start, 5000); // Tenta reconectar em 5s
+  }
+}
+
+// Tratamento de erros não capturados
+process.on('unhandledRejection', (err) => {
+  console.error('❌ Erro não tratado:', err);
 });
+
+process.on('uncaughtException', (err) => {
+  console.error('❌ Exceção não capturada:', err);
+  setTimeout(() => process.exit(1), 1000);
+});
+
+start();
