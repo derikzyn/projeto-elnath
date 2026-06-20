@@ -4,7 +4,8 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+// O Railway geralmente injeta a porta aqui. Se não injetar, assume a 8080.
+const PORT = process.env.PORT || 8080;
 
 // ── Middleware ───────────────────────────────────────────────
 app.use(cors());
@@ -63,6 +64,14 @@ function adminAuth(req, res, next) {
   if (senha !== SENHA) return res.status(401).json({ erro: 'Não autorizado.' });
   next();
 }
+
+// ============================================================
+// ROTA RAIZ (O SALVA-VIDAS DO RAILWAY)
+// ============================================================
+// Essa rota impede o Railway de achar que seu app morreu
+app.get('/', (req, res) => {
+  res.status(200).send('API Online e rodando liso!');
+});
 
 // ============================================================
 // ROTAS ESTÁTICAS E HEALTH CHECK
@@ -217,7 +226,7 @@ app.delete('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   }
 });
 
-// ── Start do Servidor sem travar ─────────────────────────────
+// ── Start do Servidor sem travar (O '0.0.0.0' obriga a ouvir portas externas)
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor rodando na porta ${PORT}`);
   initDB(); // Roda a checagem do banco em segundo plano
