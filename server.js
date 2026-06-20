@@ -12,7 +12,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.static(__dirname));
 
-// ── Conexão com o banco ──────────────────────────────────────
+// ── Conexão com o banco (Blindada contra quedas) ─────────────
 let pool;
 
 try {
@@ -28,10 +28,9 @@ try {
   });
 } catch (err) {
   console.error('❌ Erro ao criar pool:', err);
-  process.exit(1);
 }
 
-// ── Cria a tabela ───────────────────────────────────────────
+// ── Cria a tabela com a coluna Categoria ─────────────────────
 async function initDB() {
   try {
     await pool.query(`
@@ -49,15 +48,15 @@ async function initDB() {
         atualizado_em TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log('✅ Tabela "produtos" pronta.');
+    console.log('✅ Tabela "produtos" pronta e atualizada.');
     return true;
   } catch (err) {
-    console.error('❌ Erro ao criar tabela:', err.message);
+    console.error('⚠️ Banco demorando a responder, mas o servidor segue online:', err.message);
     return false;
   }
 }
 
-// ── Auth ────────────────────────────────────────────────────
+// ── Auth Admin ───────────────────────────────────────────────
 function adminAuth(req, res, next) {
   const senha = req.headers['x-admin-senha'] || req.query.senha || req.body.senha;
   const SENHA = process.env.ADMIN_SENHA || 'esquenta2026';
@@ -66,7 +65,7 @@ function adminAuth(req, res, next) {
 }
 
 // ============================================================
-// ROTAS ESTÁTICAS (SERVE FILES)
+// ROTAS ESTÁTICAS E HEALTH CHECK
 // ============================================================
 
 app.get('/index.html', (req, res) => {
@@ -77,66 +76,20 @@ app.get('/admin.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
-// ============================================================
-// ROTAS DE HEALTH CHECK E CONFIGURAÇÃO
-// ============================================================
-
-// Rota de Health Check
 app.get('/api/health', async (req, res) => {
   try {
-    const result = await pool.query('SELECT 1');
+    await pool.query('SELECT 1');
     res.json({ db: 'conectado', status: 'ok', timestamp: new Date() });
   } catch (err) {
-    console.error('Health check erro:', err.message);
     res.status(500).json({ db: 'erro', status: 'offline', erro: err.message });
   }
 });
 
-// Rota de Importação de JSON
-app.post('/api/admin/importar', adminAuth, async (req, res) => {
-  const produtos = req.body;
-  if (!Array.isArray(produtos)) return res.status(400).json({ erro: 'Formato inválido. Array esperado.' });
-
-  let importados = 0;
-  let erros = [];
-
-  try {
-    for (const p of produtos) {
-      if (!p.nome || !p.preco) {
-        erros.push(`Produto ignorado: faltam dados obrigatórios`);
-        continue;
-      }
-      
-      const categoria = p.categoria || 'Geral';
-      
-      try {
-        await pool.query(
-          `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos, categoria)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [p.nome, p.descricao || '', p.preco, p.preco_original || null, p.desconto || null, p.fotos || [], categoria]
-        );
-        importados++;
-      } catch (insertErr) {
-        erros.push(`Erro ao inserir ${p.nome}: ${insertErr.message}`);
-      }
-    }
-    
-    res.json({ 
-      sucesso: true, 
-      importados,
-      erros: erros.length > 0 ? erros : undefined
-    });
-  } catch (err) {
-    console.error('Erro na importação:', err);
-    res.status(500).json({ erro: 'Erro ao importar produtos.' });
-  }
-});
-
 // ============================================================
-// ROTAS CRUD PÚBLICAS
+// ROTAS PÚBLICAS (O SITE)
 // ============================================================
 
-// Listar todos os produtos ativos (públicos)
+// Buscar todos os produtos (com filtro opcional por categoria)
 app.get('/api/produtos', async (req, res) => {
   try {
     const categoria = req.query.categoria;
@@ -146,20 +99,18 @@ app.get('/api/produtos', async (req, res) => {
     if (categoria) {
       query += ' AND categoria = $1';
       params.push(categoria);
-      query += ' ORDER BY id ASC';
-    } else {
-      query += ' ORDER BY id ASC';
     }
+    
+    query += ' ORDER BY id ASC';
 
     const { rows } = await pool.query(query, params);
     res.json(rows);
   } catch (err) {
-    console.error('Erro:', err);
     res.status(500).json({ erro: 'Erro ao buscar produtos.' });
   }
 });
 
-// Listar categorias disponíveis
+// Listar as categorias existentes dinamicamente
 app.get('/api/categorias', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -172,10 +123,35 @@ app.get('/api/categorias', async (req, res) => {
 });
 
 // ============================================================
-// ROTAS ADMIN (PROTEGIDAS)
+// ROTAS DO PAINEL ADMIN
 // ============================================================
 
-// Listar todos os produtos (admin)
+// Importar JSON em massa
+app.post('/api/admin/importar', adminAuth, async (req, res) => {
+  const produtos = req.body;
+  if (!Array.isArray(produtos)) return res.status(400).json({ erro: 'Formato inválido. Array esperado.' });
+
+  let importados = 0;
+  try {
+    for (const p of produtos) {
+      if (!p.nome || !p.preco) continue;
+      
+      const categoria = p.categoria || 'Geral';
+      
+      await pool.query(
+        `INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos, categoria)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [p.nome, p.descricao || '', p.preco, p.preco_original || null, p.desconto || null, p.fotos || [], categoria]
+      );
+      importados++;
+    }
+    res.json({ sucesso: true, importados });
+  } catch (err) {
+    res.status(500).json({ erro: 'Erro ao importar produtos.' });
+  }
+});
+
+// Buscar todos os produtos (incluindo inativos para o painel)
 app.get('/api/admin/produtos', adminAuth, async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM produtos ORDER BY id DESC');
@@ -185,10 +161,10 @@ app.get('/api/admin/produtos', adminAuth, async (req, res) => {
   }
 });
 
-// Criar produto
+// Criar produto novo
 app.post('/api/admin/produtos', adminAuth, async (req, res) => {
   const { nome, descricao, preco, preco_original, desconto, fotos, categoria } = req.body;
-  if (!nome || !preco) return res.status(400).json({ erro: 'nome e preco são obrigatórios.' });
+  if (!nome || !preco) return res.status(400).json({ erro: 'Nome e preço são obrigatórios.' });
   
   try {
     const { rows } = await pool.query(
@@ -198,12 +174,11 @@ app.post('/api/admin/produtos', adminAuth, async (req, res) => {
     );
     res.status(201).json(rows[0]);
   } catch (err) {
-    console.error('Erro:', err);
     res.status(500).json({ erro: 'Erro ao criar produto.' });
   }
 });
 
-// Atualizar produto
+// Atualizar produto existente
 app.put('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   const { id } = req.params;
   const { nome, descricao, preco, preco_original, desconto, fotos, ativo, categoria } = req.body;
@@ -228,52 +203,30 @@ app.put('/api/admin/produtos/:id', adminAuth, async (req, res) => {
     if (!rows.length) return res.status(404).json({ erro: 'Produto não encontrado.' });
     res.json(rows[0]);
   } catch (err) {
-    console.error('Erro:', err);
     res.status(500).json({ erro: 'Erro ao atualizar.' });
   }
 });
 
-// Deletar produto (soft delete)
+// Deletar produto (Soft Delete: apenas desativa)
 app.delete('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   try {
-    const result = await pool.query('UPDATE produtos SET ativo = FALSE WHERE id = $1', [req.params.id]);
-    if (result.rowCount === 0) {
-      return res.status(404).json({ erro: 'Produto não encontrado.' });
-    }
+    await pool.query('UPDATE produtos SET ativo = FALSE WHERE id = $1', [req.params.id]);
     res.json({ sucesso: true, mensagem: 'Produto desativado com sucesso.' });
   } catch (err) { 
     res.status(500).json({ erro: 'Erro ao deletar' }); 
   }
 });
 
-// ── Start ────────────────────────────────────────────────────
-async function start() {
-  try {
-    const dbReady = await initDB();
-    if (!dbReady) {
-      console.warn('⚠️ Banco não estava pronto, mas continuando...');
-    }
-    
-    app.listen(PORT, () => {
-      console.log(`🚀 Servidor rodando na porta ${PORT}`);
-      console.log(`📍 http://localhost:${PORT}`);
-      console.log(`📍 http://localhost:${PORT}/index.html`);
-      console.log(`📍 http://localhost:${PORT}/admin.html`);
-    });
-  } catch (err) {
-    console.error('❌ Erro ao iniciar:', err);
-    setTimeout(start, 5000); // Tenta reconectar em 5s
-  }
-}
+// ── Start do Servidor sem travar ─────────────────────────────
+app.listen(PORT, () => {
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  initDB(); // Roda a checagem do banco em segundo plano
+});
 
-// Tratamento de erros não capturados
+// Tratamento global para impedir que o servidor caia por bobeira
 process.on('unhandledRejection', (err) => {
-  console.error('❌ Erro não tratado:', err);
+  console.error('⚠️ Aviso (Ignorado para não cair):', err.message);
 });
-
 process.on('uncaughtException', (err) => {
-  console.error('❌ Exceção não capturada:', err);
-  setTimeout(() => process.exit(1), 1000);
+  console.error('⚠️ Exceção (Ignorado para não cair):', err.message);
 });
-
-start();
