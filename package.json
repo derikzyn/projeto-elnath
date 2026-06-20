@@ -1,7 +1,7 @@
 {
   "name": "lingerie-esquenta-backend",
   "version": "1.0.0",
-  "description": "Backend da Lingerie Esquenta — API + Admin",
+  "description": "Backend da Lingerie Esquenta",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
