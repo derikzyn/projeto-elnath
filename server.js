@@ -4,12 +4,10 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
-// Garante o uso da porta nativa do Railway
 const PORT = process.env.PORT || 8080;
 
 // ── Middleware de Segurança e Performance ────────────────────
 app.use(cors());
-// Limitamos o tamanho do JSON recebido para evitar estouro de memória no upload
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(__dirname));
@@ -21,7 +19,7 @@ try {
   pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    max: 10, // Limita o número de conexões simultâneas para poupar RAM
+    max: 10,
     idleTimeoutMillis: 15000,
     connectionTimeoutMillis: 5000,
   });
@@ -33,9 +31,10 @@ try {
   console.error('❌ Erro crítico ao inicializar Pool do Postgres:', err.message);
 }
 
-// ── Inicialização do Banco (Sem travar o Event Loop) ─────────
+// ── Inicialização do Banco (Blindada contra tabelas antigas) ──
 async function initDB() {
   try {
+    // 1. Garante que a estrutura base da tabela existe
     await pool.query(`
       CREATE TABLE IF NOT EXISTS produtos (
         id SERIAL PRIMARY KEY,
@@ -45,15 +44,22 @@ async function initDB() {
         preco_original TEXT,
         desconto TEXT,
         fotos TEXT[],
-        categoria VARCHAR(50) DEFAULT 'Geral',
         ativo BOOLEAN DEFAULT TRUE,
         criado_em TIMESTAMP DEFAULT NOW(),
         atualizado_em TIMESTAMP DEFAULT NOW()
       );
     `);
-    console.log('✅ Tabela "produtos" verificada e pronta.');
+
+    // 2. FORÇA A INJEÇÃO DA COLUNA CATEGORIA (Evita o erro 500 em tabelas antigas)
+    await pool.query(`
+      ALTER TABLE produtos ADD COLUMN IF NOT EXISTS categoria VARCHAR(50) DEFAULT 'Geral';
+    `);
+
+    console.log('✅ Tabela "produtos" e coluna "categoria" prontas e verificadas.');
+    return true;
   } catch (err) {
-    console.error('⚠️ Banco de dados indisponível no momento, tentando novamente em segundo plano...');
+    console.error('❌ Erro ao inicializar ou atualizar o banco de dados:', err.message);
+    return false;
   }
 }
 
@@ -72,7 +78,6 @@ function adminAuth(req, res, next) {
 // ROTAS DE VERIFICAÇÃO DE SAÚDE (HEALTHCHECKS)
 // ============================================================
 
-// Impede que o proxy do Railway derrube o container por falta de resposta na raiz
 app.get('/', (req, res) => {
   res.status(200).send('API Lingerie Esquenta Online ✔️');
 });
@@ -86,7 +91,6 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Arquivos Estáticos de Fallback se necessário
 app.get('/index.html', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
 
@@ -94,12 +98,9 @@ app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'admin.ht
 // ROTAS PÚBLICAS (CONSUMIDAS PELO SITE / FRONTEND)
 // ============================================================
 
-// Buscar produtos com limite de segurança para NÃO ESTOURAR A RAM
 app.get('/api/produtos', async (req, res) => {
   try {
     const { categoria, limite, pagina } = req.query;
-    
-    // Paginação defensiva: Se houver fotos pesadas, limita o estrago na memória
     const parsedLimit = Math.min(parseInt(limite) || 40, 100); 
     const offset = ((parseInt(pagina) || 1) - 1) * parsedLimit;
 
@@ -111,7 +112,6 @@ app.get('/api/produtos', async (req, res) => {
       query += ` AND categoria = $${params.length}`;
     }
 
-    // Ordenação e limites estritos
     params.push(parsedLimit, offset);
     query += ` ORDER BY id ASC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
@@ -123,7 +123,6 @@ app.get('/api/produtos', async (req, res) => {
   }
 });
 
-// Listar categorias existentes
 app.get('/api/categorias', async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -139,7 +138,6 @@ app.get('/api/categorias', async (req, res) => {
 // ROTAS PRIVADAS DO PAINEL ADMINISTRATIVO
 // ============================================================
 
-// Buscar todos os produtos no Admin (Com limite preventivo de 100 itens recentes)
 app.get('/api/admin/produtos', adminAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -151,7 +149,6 @@ app.get('/api/admin/produtos', adminAuth, async (req, res) => {
   }
 });
 
-// Criar novo produto
 app.post('/api/admin/produtos', adminAuth, async (req, res) => {
   const { nome, descricao, preco, preco_original, desconto, fotos, categoria } = req.body;
   if (!nome || !preco) return res.status(400).json({ erro: 'Nome e Preço são campos obrigatórios.' });
@@ -168,7 +165,6 @@ app.post('/api/admin/produtos', adminAuth, async (req, res) => {
   }
 });
 
-// Atualizar produto existente
 app.put('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   const { id } = req.params;
   const { nome, descricao, preco, preco_original, desconto, fotos, ativo, categoria } = req.body;
@@ -197,7 +193,6 @@ app.put('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   }
 });
 
-// Importação em lote (JSON) com salvamento controlado
 app.post('/api/admin/importar', adminAuth, async (req, res) => {
   const produtos = req.body;
   if (!Array.isArray(produtos)) return res.status(400).json({ erro: 'Formato de dados inválido. Esperado um Array.' });
@@ -219,7 +214,6 @@ app.post('/api/admin/importar', adminAuth, async (req, res) => {
   }
 });
 
-// Desativar Produto (Soft Delete)
 app.delete('/api/admin/produtos/:id', adminAuth, async (req, res) => {
   try {
     const { rowCount } = await pool.query('UPDATE produtos SET ativo = FALSE WHERE id = $1', [req.params.id]);
@@ -236,10 +230,10 @@ app.listen(PORT, '0.0.0.0', () => {
   initDB();
 });
 
-// 防御 Trata erros inesperados globalmente para evitar que o processo quebre sozinho
+// Trata erros inesperados globalmente para evitar quedas por bobeira
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('⚠️ Rejeição não tratada detectada (Capturada para proteção):', reason);
+  console.error('⚠️ Rejeição não tratada detectada:', reason);
 });
 process.on('uncaughtException', (err) => {
-  console.error('⚠️ Exceção não capturada detectada (Evitando crash do container):', err.message);
+  console.error('⚠️ Exceção não capturada detectada:', err.message);
 });
