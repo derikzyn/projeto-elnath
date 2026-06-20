@@ -43,7 +43,6 @@ html{scroll-behavior:smooth;}
 </div>
 
 <div id="app" class="hidden min-h-screen">
-
   <div class="flex h-screen overflow-hidden">
     <aside class="w-64 bg-brandDark text-white flex flex-col shrink-0">
       <div class="p-6 border-b border-white/10">
@@ -84,7 +83,6 @@ html{scroll-behavior:smooth;}
     </aside>
 
     <main class="flex-grow overflow-y-auto bg-gray-50">
-
       <div id="tab-dashboard" class="tab-content p-8">
         <h2 class="font-serif text-3xl font-bold mb-2">Dashboard</h2>
         <p class="text-gray-500 text-sm mb-8">Visão geral da loja.</p>
@@ -123,20 +121,6 @@ html{scroll-behavior:smooth;}
             </div>
           </div>
         </div>
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-          <h3 class="font-semibold text-sm mb-4 uppercase tracking-wider text-gray-500">Ações Rápidas</h3>
-          <div class="flex flex-wrap gap-3">
-            <button onclick="showTab('novo')" class="px-5 py-2.5 bg-brandDark text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-brand transition">
-              <i class="fa-solid fa-plus mr-2"></i>Novo Produto
-            </button>
-            <button onclick="showTab('produtos')" class="px-5 py-2.5 bg-gray-100 text-gray-700 text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gray-200 transition">
-              <i class="fa-solid fa-list mr-2"></i>Ver Todos
-            </button>
-            <a href="/" target="_blank" class="px-5 py-2.5 bg-brand/20 text-brandDark text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-brand/30 transition">
-              <i class="fa-solid fa-eye mr-2"></i>Ver Site
-            </a>
-          </div>
-        </div>
       </div>
 
       <div id="tab-produtos" class="tab-content hidden p-8">
@@ -145,510 +129,224 @@ html{scroll-behavior:smooth;}
             <h2 class="font-serif text-3xl font-bold">Produtos</h2>
             <p class="text-gray-500 text-sm">Gerencie todos os conjuntos da loja.</p>
           </div>
-          <button onclick="showTab('novo')" class="px-5 py-3 bg-brandDark text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-brand transition">
-            <i class="fa-solid fa-plus mr-2"></i>Novo
-          </button>
         </div>
-
-        <div class="flex gap-3 mb-6">
-          <div class="relative flex-grow">
-            <input id="search-prod" type="text" placeholder="Buscar por nome…" oninput="filterProdutos(this.value)"
-              class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand bg-white">
-            <i class="fa-solid fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          </div>
-          <select onchange="filterProdutos(document.getElementById('search-prod').value)" id="filter-ativo"
-            class="px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none bg-white text-gray-600">
-            <option value="todos">Todos</option>
-            <option value="ativos">Ativos</option>
-            <option value="inativos">Inativos</option>
-          </select>
-        </div>
-
-        <div id="prod-list" class="space-y-3">
-          <div class="text-center py-12 text-gray-400"><i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i><p class="text-sm">Carregando…</p></div>
-        </div>
+        <div id="prod-list" class="space-y-3"></div>
       </div>
 
       <div id="tab-novo" class="tab-content hidden p-8">
         <h2 class="font-serif text-3xl font-bold mb-1" id="form-title">Novo Produto</h2>
-        <p class="text-gray-500 text-sm mb-8" id="form-subtitle">Preencha os dados e adicione fotos.</p>
-
         <div class="max-w-2xl space-y-6">
           <input type="hidden" id="edit-id">
-
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-            <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Informações</h3>
             <div>
-              <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Nome do Conjunto *</label>
-              <input id="f-nome" type="text" placeholder="Ex: Corset Black Rose Premium"
-                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+              <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Nome do Conjunto *</label>
+              <input id="f-nome" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none">
             </div>
             <div>
-              <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Descrição</label>
-              <textarea id="f-desc" rows="3" placeholder="Descrição breve do produto…"
-                class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand resize-none"></textarea>
+              <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Descrição</label>
+              <textarea id="f-desc" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none resize-none"></textarea>
             </div>
-          </div>
-
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-            <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Preços</h3>
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Preço Real *</label>
-                <div class="relative">
-                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">R$</span>
-                  <input id="f-preco" type="text" placeholder="299,90"
-                    class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
-                </div>
+                <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Preço *</label>
+                <input id="f-preco" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none">
               </div>
               <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Preço "De" (riscado)</label>
-                <div class="relative">
-                  <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-bold">R$</span>
-                  <input id="f-original" type="text" placeholder="379,90 (opcional)"
-                    class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
-                </div>
+                <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Categoria</label>
+                <input id="f-categoria" type="text" placeholder="Ex: essencial, Geral" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none">
               </div>
             </div>
-            <div class="grid grid-cols-2 gap-4 items-end">
-              <div>
-                <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Badge de Desconto</label>
-                <input id="f-desconto" type="text" placeholder="Ex: 20% OFF"
-                  class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
-              </div>
-              <button onclick="calcDesconto()" class="py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-bold uppercase tracking-wider rounded-xl transition">
-                <i class="fa-solid fa-calculator mr-1"></i> Calcular % auto
-              </button>
-            </div>
           </div>
-
-          <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-            <div class="flex items-center justify-between">
-              <h3 class="font-semibold text-sm uppercase tracking-wider text-gray-500">Fotos (máx. 5)</h3>
-              <span class="text-xs text-gray-400" id="foto-count">0 foto(s)</span>
-            </div>
-
-            <div id="drop-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)"
-              class="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center cursor-pointer hover:border-brand transition"
-              onclick="document.getElementById('foto-input').click()">
-              <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-300 mb-2"></i>
-              <p class="text-sm text-gray-400 font-medium">Arraste fotos aqui ou clique para selecionar</p>
-              <p class="text-xs text-gray-300 mt-1">JPG, PNG — até 5 fotos, max 5MB cada</p>
-              <input type="file" id="foto-input" accept="image/*" multiple class="hidden" onchange="handleFiles(this.files)">
-            </div>
-
-            <div id="foto-preview" class="flex gap-3 flex-wrap"></div>
-          </div>
-
-          <div class="flex gap-3">
-            <button onclick="salvarProduto()" id="btn-salvar"
-              class="flex-1 py-4 bg-brandDark hover:bg-brand text-white font-bold text-sm uppercase tracking-wider rounded-xl transition flex items-center justify-center gap-2">
-              <i class="fa-solid fa-floppy-disk"></i> <span id="btn-salvar-txt">Salvar Produto</span>
-            </button>
-            <button onclick="resetForm()" class="px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold uppercase tracking-wider rounded-xl transition">
-              Limpar
-            </button>
-          </div>
+          <button onclick="salvarProduto()" id="btn-salvar" class="w-full py-4 bg-brandDark text-white font-bold rounded-xl transition">Salvar Produto</button>
         </div>
       </div>
 
       <div id="tab-importar" class="tab-content hidden p-8">
         <h2 class="font-serif text-3xl font-bold mb-1">Importar Produtos</h2>
-        <p class="text-gray-500 text-sm mb-8">Cole um array JSON de produtos para importar de uma vez.</p>
-
+        <p class="text-gray-500 text-sm mb-8">Cole o array JSON de produtos pesados aqui. O sistema processará os itens um a um de forma segura.</p>
         <div class="max-w-2xl space-y-5">
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <label class="block text-xs font-bold text-gray-600 mb-3 uppercase tracking-wider">Array JSON de Produtos</label>
-            <textarea id="import-json" rows="12" placeholder='[&#10;  { "nome": "Corset Black Rose", "preco": "299,90", "descricao": "...", "fotos": [] },&#10;  ...&#10;]'
-              class="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs font-mono focus:outline-none focus:border-brand resize-none bg-gray-50"></textarea>
+            <textarea id="import-json" rows="12" placeholder='[ { "nome": "...", "preco": "..." } ]' class="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs font-mono bg-gray-50 resize-none focus:outline-none"></textarea>
           </div>
-          <div class="flex gap-3">
-            <button onclick="importarJSON()" class="flex-1 py-4 bg-brandDark hover:bg-brand text-white font-bold text-sm uppercase tracking-wider rounded-xl transition">
-              <i class="fa-solid fa-file-import mr-2"></i> Importar
-            </button>
-            <button onclick="document.getElementById('import-json').value=''" class="px-6 py-4 bg-gray-100 hover:bg-gray-200 text-gray-600 text-sm font-bold uppercase tracking-wider rounded-xl transition">
-              Limpar
-            </button>
-          </div>
-          <div class="bg-brand/10 border border-brand/30 rounded-xl p-4 text-xs text-gray-600 leading-relaxed">
-            <strong>Campos aceitos:</strong> nome*, preco*, descricao, preco_original, desconto, fotos (array de base64 ou URLs).<br>
-            <strong>*</strong> obrigatórios. Produtos duplicados são ignorados automaticamente.
-          </div>
+          <button onclick="importarJSON()" class="w-full py-4 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl transition">
+            <i class="fa-solid fa-file-import mr-2"></i> Iniciar Importação Segura
+          </button>
         </div>
       </div>
-
     </main>
   </div>
 </div>
 
-<div id="edit-modal" class="fixed inset-0 z-50 modal-overlay hidden flex items-center justify-center p-4">
-  <div class="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-y-auto max-h-[92vh] relative">
-    <button onclick="closeEditModal()" class="absolute top-4 right-4 w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 transition">
-      <i class="fa-solid fa-xmark"></i>
-    </button>
-    <div class="p-8" id="edit-modal-content">
-      </div>
-  </div>
-</div>
-
-<div id="toast" class="fixed bottom-6 right-6 z-[60] bg-brandDark text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 translate-y-24 opacity-0 pointer-events-none border border-brand/30">
+<div id="toast" class="fixed bottom-6 right-6 z-[60] bg-brandDark text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 translate-y-24 opacity-0 pointer-events-none transition-all">
   <i id="toast-icon" class="fa-solid fa-circle-check text-brand text-lg"></i>
   <span id="toast-msg" class="text-sm font-semibold"></span>
 </div>
 
 <script>
-// ============================================================
-// CONFIGURAÇÃO GERAL
-// ============================================================
 const BASE_URL = 'https://projeto-elnath-production.up.railway.app';
 let SENHA = '';
 let todosOsProdutos = [];
-let fotosBase64 = [];
 
-// ============================================================
-// LOGIN E AUTENTICAÇÃO
-// ============================================================
 function doLogin() {
   const inp = document.getElementById('senha-input').value.trim();
   if (!inp) return;
-  
   fetch(`${BASE_URL}/api/admin/produtos`, { headers: { 'x-admin-senha': inp } })
-    .then(async res => {
+    .then(res => {
       if (res.ok) {
         SENHA = inp;
-        document.getElementById('login-screen').style.opacity = '0';
-        setTimeout(() => {
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('app').classList.remove('hidden');
-          showTab('dashboard');
-          loadDashboard();
-        }, 300);
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('app').classList.remove('hidden');
+        showTab('dashboard');
       } else {
-        document.getElementById('login-error').textContent = 'Senha incorreta. Tente novamente.';
         document.getElementById('login-error').classList.remove('hidden');
       }
     })
     .catch(() => {
-      document.getElementById('login-error').textContent = 'Erro ao conectar ao Railway. O servidor pode estar dormindo.';
+      document.getElementById('login-error').textContent = 'Erro ao conectar ao servidor.';
       document.getElementById('login-error').classList.remove('hidden');
     });
 }
 
-function doLogout() {
-  SENHA = '';
-  location.reload();
-}
+function doLogout() { SENHA = ''; location.reload(); }
 
-// ============================================================
-// SISTEMA DE ABAS (TABS)
-// ============================================================
 function showTab(tab) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-white/10','text-white'));
   document.getElementById(`tab-${tab}`).classList.remove('hidden');
-  const nb = document.getElementById(`nav-${tab}`);
-  if (nb) { nb.classList.add('bg-white/10','text-white'); nb.classList.remove('text-white/70'); }
-
   if (tab === 'produtos') loadProdutos();
   if (tab === 'dashboard') loadDashboard();
-  if (tab === 'novo') { resetForm(); }
 }
 
-// ============================================================
-// DASHBOARD
-// ============================================================
 async function loadDashboard() {
   try {
     const h = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
-    document.getElementById('dash-db-status').textContent = h.db === 'conectado' ? '✅ Conectado' : '❌ Desconectado';
-    document.getElementById('dash-db-status').className = h.db === 'conectado' ? 'text-sm font-bold text-green-600' : 'text-sm font-bold text-red-500';
-  } catch {
-    document.getElementById('dash-db-status').textContent = '❌ Servidor offline';
-    document.getElementById('dash-db-status').className = 'text-sm font-bold text-red-500';
-  }
-  try {
+    document.getElementById('dash-db-status').textContent = h.database === 'connected' ? '✅ Conectado' : '❌ Desconectado';
     const ps = await apiFetch('/api/admin/produtos');
-    const ativos = ps.filter(p => p.ativo);
-    const ofertas = ativos.filter(p => p.desconto);
-    document.getElementById('dash-total').textContent = ativos.length;
-    document.getElementById('dash-oferta').textContent = ofertas.length;
+    document.getElementById('dash-total').textContent = ps.length;
+    document.getElementById('dash-oferta').textContent = ps.filter(p => p.desconto).length;
   } catch {}
 }
 
-// ============================================================
-// GERENCIAMENTO DE PRODUTOS
-// ============================================================
 async function loadProdutos() {
   const cont = document.getElementById('prod-list');
-  cont.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fa-solid fa-spinner fa-spin text-xl mb-2"></i><p class="text-sm">Carregando…</p></div>';
   try {
     todosOsProdutos = await apiFetch('/api/admin/produtos');
-    renderProdList(todosOsProdutos);
-  } catch (err) {
-    cont.innerHTML = `<div class="text-center py-8 text-red-400"><i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i><p class="text-sm">${err.message}</p></div>`;
-  }
-}
-
-function renderProdList(lista) {
-  const cont = document.getElementById('prod-list');
-  if (!lista.length) {
-    cont.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fa-solid fa-box-open text-4xl mb-3"></i><p>Nenhum produto encontrado.</p></div>';
-    return;
-  }
-  cont.innerHTML = lista.map(p => `
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 ${!p.ativo?'opacity-50':''}">
-      ${p.fotos && p.fotos.length
-        ? `<img src="${p.fotos[0]}" class="thumb shrink-0" alt="${p.nome}">`
-        : `<div class="thumb shrink-0 bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-image text-gray-300 text-xl"></i></div>`}
-      <div class="flex-grow min-w-0">
-        <div class="flex items-start gap-2 flex-wrap">
-          <h3 class="font-serif font-semibold text-sm text-gray-800 leading-tight">${p.nome}</h3>
-          ${!p.ativo ? '<span class="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-bold uppercase">Inativo</span>' : ''}
-          ${p.desconto ? `<span class="text-[10px] bg-red-50 text-red-500 border border-red-200 px-2 py-0.5 rounded-full font-bold">${p.desconto}</span>` : ''}
-        </div>
-        <div class="flex items-center gap-3 mt-1">
+    cont.innerHTML = todosOsProdutos.map(p => `
+      <div class="bg-white rounded-2xl border p-4 flex items-center justify-between">
+        <div>
+          <h3 class="font-serif font-semibold text-sm text-gray-800">${p.nome} - <span class="text-xs text-gray-400">${p.categoria}</span></h3>
           <span class="text-base font-black text-gray-800">R$ ${p.preco}</span>
-          ${p.preco_original ? `<span class="text-xs text-gray-400 line-through">R$ ${p.preco_original}</span>` : ''}
-          <span class="text-xs text-gray-400">${p.fotos ? p.fotos.length : 0} foto(s)</span>
         </div>
-        <p class="text-xs text-gray-400 mt-1 truncate">${p.descricao || '—'}</p>
+        <button onclick="excluirProduto(${p.id})" class="text-red-500 hover:text-red-700 text-sm"><i class="fa-solid fa-trash"></i></button>
       </div>
-      <div class="flex gap-2 shrink-0">
-        <button onclick="editarProduto(${p.id})" class="w-9 h-9 bg-gray-100 hover:bg-brand/20 text-gray-600 hover:text-brandDark rounded-xl flex items-center justify-center transition" title="Editar">
-          <i class="fa-solid fa-pen text-xs"></i>
-        </button>
-        <button onclick="toggleAtivo(${p.id}, ${p.ativo})" class="w-9 h-9 ${p.ativo?'bg-yellow-50 hover:bg-yellow-100 text-yellow-600':'bg-green-50 hover:bg-green-100 text-green-600'} rounded-xl flex items-center justify-center transition" title="${p.ativo?'Desativar':'Ativar'}">
-          <i class="fa-solid ${p.ativo?'fa-eye-slash':'fa-eye'} text-xs"></i>
-        </button>
-        <button onclick="excluirProduto(${p.id}, '${p.nome.replace(/'/g,"\\'")}' )" class="w-9 h-9 bg-red-50 hover:bg-red-100 text-red-400 hover:text-red-600 rounded-xl flex items-center justify-center transition" title="Excluir">
-          <i class="fa-solid fa-trash text-xs"></i>
-        </button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function filterProdutos(q) {
-  const filtro = document.getElementById('filter-ativo').value;
-  let lista = todosOsProdutos;
-  if (filtro === 'ativos')   lista = lista.filter(p => p.ativo);
-  if (filtro === 'inativos') lista = lista.filter(p => !p.ativo);
-  if (q.trim()) lista = lista.filter(p => p.nome.toLowerCase().includes(q.toLowerCase()));
-  renderProdList(lista);
-}
-
-// ============================================================
-// ACOES CRUD
-// ============================================================
-async function toggleAtivo(id, ativo) {
-  try {
-    await apiFetch(`/api/admin/produtos/${id}`, 'PUT', { ativo: !ativo });
-    showToast(ativo ? 'Produto desativado.' : 'Produto ativado.', 'info');
-    loadProdutos();
-    loadDashboard();
-  } catch (err) { showToast(err.message, 'erro'); }
-}
-
-async function excluirProduto(id, nome) {
-  if (!confirm(`Desativar "${nome}"?\n(O produto ficará oculto no site mas pode ser reativado.)`)) return;
-  try {
-    await apiFetch(`/api/admin/produtos/${id}`, 'DELETE');
-    showToast('Produto desativado.', 'info');
-    loadProdutos();
-    loadDashboard();
-  } catch (err) { showToast(err.message, 'erro'); }
-}
-
-function editarProduto(id) {
-  const p = todosOsProdutos.find(x => x.id === id);
-  if (!p) return;
-  
-  document.getElementById('form-title').textContent = 'Editar Produto';
-  document.getElementById('form-subtitle').textContent = `Editando: ${p.nome}`;
-  document.getElementById('edit-id').value = p.id;
-  document.getElementById('f-nome').value = p.nome || '';
-  document.getElementById('f-desc').value = p.descricao || '';
-  document.getElementById('f-preco').value = p.preco || '';
-  document.getElementById('f-original').value = p.preco_original || '';
-  document.getElementById('f-desconto').value = p.desconto || '';
-  document.getElementById('btn-salvar-txt').textContent = 'Atualizar Produto';
-
-  fotosBase64 = p.fotos || [];
-  renderFotoPreview();
-  showTab('novo');
+    `).join('');
+  } catch (err) {
+    cont.innerHTML = `<p class="text-red-500 text-sm text-center">Erro ao carregar lista.</p>`;
+  }
 }
 
 async function salvarProduto() {
-  // ATENÇÃO: O erro da variável id sem o sinal de igual foi corrigido!
-  const id    = document.getElementById('edit-id').value;
-  const nome  = document.getElementById('f-nome').value.trim();
-  const desc  = document.getElementById('f-desc').value.trim();
+  const nome = document.getElementById('f-nome').value.trim();
+  const desc = document.getElementById('f-desc').value.trim();
   const preco = document.getElementById('f-preco').value.trim();
-  const orig  = document.getElementById('f-original').value.trim();
-  const desc2 = document.getElementById('f-desconto').value.trim();
+  const categoria = document.getElementById('f-categoria').value.trim() || 'Geral';
 
-  if (!nome || !preco) { showToast('Nome e preço são obrigatórios!', 'erro'); return; }
-
-  const btn = document.getElementById('btn-salvar');
-  btn.innerHTML = '<div class="spinner"></div>';
-  btn.disabled = true;
-
-  const body = { nome, descricao: desc, preco, preco_original: orig || null, desconto: desc2 || null, fotos: fotosBase64 };
+  if (!nome || !preco) { showToast('Preencha os campos obrigatórios', 'erro'); return; }
 
   try {
-    if (id) {
-      await apiFetch(`/api/admin/produtos/${id}`, 'PUT', body);
-      showToast('Produto atualizado com sucesso!');
-    } else {
-      await apiFetch('/api/admin/produtos', 'POST', body);
-      showToast('Produto criado com sucesso!');
-    }
-    resetForm();
-    loadDashboard();
-  } catch (err) {
-    showToast(err.message, 'erro');
-  } finally {
-    btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> <span id="btn-salvar-txt">Salvar Produto</span>';
-    btn.disabled = false;
-  }
-}
-
-function resetForm() {
-  document.getElementById('form-title').textContent = 'Novo Produto';
-  document.getElementById('form-subtitle').textContent = 'Preencha os dados e adicione fotos.';
-  document.getElementById('edit-id').value = '';
-  document.getElementById('f-nome').value = '';
-  document.getElementById('f-desc').value = '';
-  document.getElementById('f-preco').value = '';
-  document.getElementById('f-original').value = '';
-  document.getElementById('f-desconto').value = '';
-  document.getElementById('btn-salvar-txt').textContent = 'Salvar Produto';
-  fotosBase64 = [];
-  renderFotoPreview();
-}
-
-function calcDesconto() {
-  const preco  = parseFloat(document.getElementById('f-preco').value.replace(',','.'));
-  const orig   = parseFloat(document.getElementById('f-original').value.replace(',','.'));
-  if (!preco || !orig || orig <= preco) { showToast('Preencha preço real e preço "de" primeiro.', 'info'); return; }
-  const pct = Math.round((1 - preco/orig)*100);
-  document.getElementById('f-desconto').value = `${pct}% OFF`;
-  showToast(`Desconto calculado: ${pct}% OFF`);
-}
-
-// ============================================================
-// TRATAMENTO DE FOTOS
-// ============================================================
-function handleDragOver(e) { e.preventDefault(); document.getElementById('drop-area').classList.add('drag-over'); }
-function handleDragLeave()  { document.getElementById('drop-area').classList.remove('drag-over'); }
-function handleDrop(e) {
-  e.preventDefault();
-  handleDragLeave();
-  handleFiles(e.dataTransfer.files);
-}
-
-function handleFiles(files) {
-  const remaining = 5 - fotosBase64.length;
-  if (remaining <= 0) { showToast('Máximo de 5 fotos atingido.', 'info'); return; }
-  Array.from(files).slice(0, remaining).forEach(file => {
-    if (!file.type.startsWith('image/')) return;
-    if (file.size > 5*1024*1024) { showToast(`"${file.name}" é muito grande (max 5MB).`, 'erro'); return; }
-    const reader = new FileReader();
-    reader.onload = e => {
-      fotosBase64.push(e.target.result);
-      renderFotoPreview();
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function renderFotoPreview() {
-  const prev = document.getElementById('foto-preview');
-  document.getElementById('foto-count').textContent = `${fotosBase64.length} foto(s)`;
-  prev.innerHTML = fotosBase64.map((src, i) => `
-    <div class="relative group">
-      <img src="${src}" class="thumb" alt="Foto ${i+1}">
-      <button onclick="removerFoto(${i})"
-        class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
-        ✕
-      </button>
-      ${i===0?'<span class="absolute bottom-0.5 left-0.5 text-[9px] bg-black/60 text-white px-1 rounded font-bold">CAPA</span>':''}
-    </div>
-  `).join('');
-}
-
-function removerFoto(i) {
-  fotosBase64.splice(i, 1);
-  renderFotoPreview();
-}
-
-// ============================================================
-// IMPORTAÇÃO JSON
-// ============================================================
-async function importarJSON() {
-  const raw = document.getElementById('import-json').value.trim();
-  if (!raw) { showToast('Cole o JSON antes de importar.', 'info'); return; }
-  let lista;
-  try { lista = JSON.parse(raw); } catch { showToast('JSON inválido. Verifique se copiou corretamente.', 'erro'); return; }
-  try {
-    const res = await apiFetch('/api/admin/importar', 'POST', lista);
-    showToast(`✅ ${res.importados} produto(s) importados!`);
-    document.getElementById('import-json').value = '';
-    loadDashboard();
+    await apiFetch('/api/admin/produtos', 'POST', { nome, descricao: desc, preco, categoria });
+    showToast('Produto criado com sucesso!');
+    showTab('produtos');
   } catch (err) { showToast(err.message, 'erro'); }
 }
 
-// ============================================================
-// API FETCH (BLINDADO CONTRA ERRO JSON)
-// ============================================================
-async function apiFetch(url, method = 'GET', body = null) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json', 'x-admin-senha': SENHA },
-  };
-  if (body) opts.body = JSON.stringify(body);
-  
-  // Realiza a chamada pro Railway
-  const res = await fetch(`${BASE_URL}${url}`, opts);
-  
-  // Lê a resposta do servidor em formato de texto cru primeiro para evitar o "SyntaxError"
-  const rawText = await res.text();
-  let data;
-  
+async function excluirProduto(id) {
+  if(!confirm('Deseja desativar este produto?')) return;
   try {
-    data = JSON.parse(rawText);
+    await apiFetch(`/api/admin/produtos/${id}`, 'DELETE');
+    showToast('Produto desativado.');
+    loadProdutos();
+  } catch (err) { showToast(err.message, 'erro'); }
+}
+
+// ===== IMPORTAÇÃO SEGURA (MANDA ITEM POR ITEM PARA NÃO DAR OUT OF MEMORY) =====
+async function importarJSON() {
+  const raw = document.getElementById('import-json').value.trim();
+  if (!raw) { showToast('Cole o arquivo JSON.', 'info'); return; }
+
+  let lista;
+  try {
+    lista = JSON.parse(raw);
   } catch (err) {
-    console.error("Resposta do servidor não foi um JSON válido:", rawText);
-    throw new Error(`Erro no servidor (Status: ${res.status}). Verifique o log do Railway.`);
+    showToast('Erro de sintaxe no JSON. Verifique o fechamento de chaves.', 'erro');
+    return;
   }
 
-  if (!res.ok) throw new Error(data.erro || `Falha na requisição (Erro ${res.status})`);
+  if (!Array.isArray(lista)) {
+    showToast('O formato correto precisa ser um array [ { ... } ].', 'erro');
+    return;
+  }
+
+  const btn = document.querySelector('#tab-importar button');
+  const txtOriginal = btn.innerHTML;
+  btn.disabled = true;
+
+  let importados = 0;
+  let falhas = 0;
+
+  showToast(`Iniciando importação parcelada de ${lista.length} itens...`, 'info');
+
+  for (let i = 0; i < lista.length; i++) {
+    const item = lista[i];
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Importando item ${i + 1} de ${lista.length}...`;
+
+    try {
+      await apiFetch('/api/admin/produtos', 'POST', {
+        nome: item.nome,
+        descricao: item.descricao || '',
+        preco: item.preco,
+        preco_original: item.preco_original || null,
+        desconto: item.desconto || null,
+        fotos: item.fotos || [],
+        categoria: item.categoria || 'essencial'
+      });
+      importados++;
+    } catch (err) {
+      console.error(`Erro ao importar item ${item.nome || i}:`, err);
+      falhas++;
+    }
+  }
+
+  btn.innerHTML = txtOriginal;
+  btn.disabled = false;
+  document.getElementById('import-json').value = '';
+
+  if (falhas === 0) {
+    showToast(`✅ Concluído! Todos os ${importados} produtos foram salvos.`);
+  } else {
+    showToast(`⚠️ Concluído com ${importados} sucessos e ${falhas} falhas devido ao tamanho das strings.`, 'info');
+  }
+  loadDashboard();
+}
+
+async function apiFetch(url, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-senha': SENHA } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${BASE_URL}${url}`, opts);
+  const text = await res.text();
+  let data;
+  try { data = JSON.parse(text); } catch { throw new Error('Falha na resposta do servidor.'); }
+  if (!res.ok) throw new Error(data.erro || 'Erro na requisição.');
   return data;
 }
 
-// ============================================================
-// UTILITÁRIOS
-// ============================================================
 let _tt;
 function showToast(msg, tipo = 'ok') {
   clearTimeout(_tt);
-  const t    = document.getElementById('toast');
-  const icon = document.getElementById('toast-icon');
+  const t = document.getElementById('toast');
   document.getElementById('toast-msg').textContent = msg;
-  icon.className = tipo === 'erro'
-    ? 'fa-solid fa-circle-exclamation text-red-400 text-lg'
-    : tipo === 'info'
-    ? 'fa-solid fa-circle-info text-blue-400 text-lg'
-    : 'fa-solid fa-circle-check text-brand text-lg';
-  t.classList.remove('translate-y-24','opacity-0','pointer-events-none');
-  t.classList.add('translate-y-0','opacity-100');
-  _tt = setTimeout(() => {
-    t.classList.add('translate-y-24','opacity-0','pointer-events-none');
-    t.classList.remove('translate-y-0','opacity-100');
-  }, 3500);
+  t.classList.remove('translate-y-24', 'opacity-0', 'pointer-events-none');
+  _tt = setTimeout(() => t.classList.add('translate-y-24', 'opacity-0', 'pointer-events-none'), 3500);
 }
-
-function closeEditModal() { document.getElementById('edit-modal').classList.add('hidden'); }
 </script>
 </body>
 </html>
