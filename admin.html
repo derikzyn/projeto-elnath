@@ -183,7 +183,7 @@ html{scroll-behavior:smooth;}
 </div>
 
 <script>
-const BASE_URL = 'https://projeto-elnath-production.up.railway.app'; // Apontando diretamente para o Railway
+const BASE_URL = 'https://projeto-elnath-production.up.railway.app'; // <--- CORREÇÃO AQUI
 let SENHA = '';
 let todosOsProdutos = [];
 
@@ -219,7 +219,7 @@ function showTab(tab) {
 async function loadDashboard() {
   try {
     const h = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
-    document.getElementById('dash-db-status').textContent = h.database === 'connected' ? '✅ Conectado' : '❌ Desconectado';
+    document.getElementById('dash-db-status').textContent = h.status === 'ok' ? '✅ Conectado' : '❌ Desconectado'; // <--- CORREÇÃO AQUI
     const ps = await apiFetch('/api/admin/produtos');
     document.getElementById('dash-total').textContent = ps.length;
     document.getElementById('dash-oferta').textContent = ps.filter(p => p.desconto).length;
