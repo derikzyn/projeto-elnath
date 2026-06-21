@@ -470,7 +470,7 @@ let qA = {};
 // ── Carrega produtos vindos do banco do Railway ──────────
 async function carregarProdutos() {
   try {
-    const apiUrl = window.location.origin + '/api/produtos';
+    const apiUrl = 'https://projeto-elnath-production.up.railway.app/api/produtos'; // Apontando diretamente para o Railway
     const res = await fetch(apiUrl);
     if (!res.ok) throw new Error('Falha na API: ' + res.status);
     produtos = await res.json();
