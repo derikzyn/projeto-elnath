@@ -6,20 +6,18 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Middlewares - LIMITADOS para economizar RAM
+// Middlewares - LIMITADOS
 app.use(cors());
-app.use(express.json({ limit: '5mb' })); // REDUZIDO de 15mb
+app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(express.static(__dirname));
 
-// Pool SUPER OTIMIZADO
+// Pool OTIMIZADO - SEM SSL FORÇADO
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: true,
-  max: 2, // REDUZIDO para economia de memória
-  idleTimeoutMillis: 3000, // Fecha conexões rapidinho
+  max: 2,
+  idleTimeoutMillis: 3000,
   connectionTimeoutMillis: 3000,
-  statement_timeout: 5000,
 });
 
 pool.on('error', (err) => console.error('❌ Pool error:', err.message));
@@ -65,21 +63,20 @@ app.get('/api/health', async (req, res) => {
     await pool.query('SELECT 1');
     res.json({ status: 'ok' });
   } catch (e) {
-    res.status(500).json({ status: 'erro' });
+    res.status(500).json({ status: 'erro', msg: e.message });
   }
 });
 
 app.get('/api/produtos', async (req, res) => {
   try {
-    const query = 'SELECT id, nome, descricao, preco, fotos, categoria FROM produtos WHERE ativo=TRUE LIMIT 50';
-    const { rows } = await pool.query(query);
+    const { rows } = await pool.query('SELECT id, nome, descricao, preco, fotos, categoria FROM produtos WHERE ativo=TRUE LIMIT 50');
     res.json(rows);
   } catch (e) {
     res.status(500).json({ erro: e.message });
   }
 });
 
-// ADMIN - IMPORTAÇÃO PARCELADA (item por item, não tudo de uma vez!)
+// ADMIN - IMPORTAÇÃO PARCELADA
 app.post('/api/admin/importar', auth, async (req, res) => {
   const produtos = req.body;
   if (!Array.isArray(produtos)) {
@@ -103,9 +100,8 @@ app.post('/api/admin/importar', auth, async (req, res) => {
         erros.push(p.nome);
       }
       
-      // Liberar memória a cada 5 produtos
       if (ok % 5 === 0) {
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 50));
       }
     }
     
@@ -115,7 +111,7 @@ app.post('/api/admin/importar', auth, async (req, res) => {
   }
 });
 
-// ADMIN - LISTAR (com LIMITE para não sobrecarregar)
+// ADMIN - LISTAR
 app.get('/api/admin/produtos', auth, async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM produtos LIMIT 30');
