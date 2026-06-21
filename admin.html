@@ -255,11 +255,16 @@ html{scroll-behavior:smooth;}
 
 <script>
 const BASE_URL = 'https://projeto-elnath-production.up.railway.app';
-let SENHA = '';
+let SENHA = 'esquenta2026';
 let todosOsProdutos = [];
 let modoSelecao = false;
 let selecionados = new Set();
 let editandoId = null;
+
+// Teste automático de conexão
+window.addEventListener('load', () => {
+  doLogin();
+});
 
 // ===== AUTH =====
 function doLogin() {
