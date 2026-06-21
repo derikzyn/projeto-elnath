@@ -15,16 +15,17 @@ html{scroll-behavior:smooth;}
 .no-scrollbar::-webkit-scrollbar{display:none;}
 .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
 #login-screen{transition:opacity .3s;}
-.thumb{width:72px;height:90px;object-fit:cover;object-position:top;border-radius:8px;border:2px solid #E1B1B1;}
+.thumb{width:60px;height:75px;object-fit:cover;object-position:top;border-radius:6px;border:1px solid #E1B1B1;}
 #toast{transition:all .3s cubic-bezier(.34,1.56,.64,1);}
 .modal-overlay{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);}
 .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.drag-over{border-color:#E1B1B1!important;background:#FDF5F5!important;}
 .prod-card{transition:box-shadow .15s,border-color .15s;}
 .prod-card.selecionado{border-color:#E1B1B1!important;background:#FDF5F5;}
 .checkbox-sel{width:18px;height:18px;accent-color:#111;cursor:pointer;border-radius:4px;}
 #barra-selecao{transition:all .25s cubic-bezier(.34,1.56,.64,1);}
+.modal{display:none;opacity:0;transition:opacity .3s;}
+.modal.show{display:flex;opacity:1;}
 </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen">
@@ -157,12 +158,12 @@ html{scroll-behavior:smooth;}
             </button>
             <button onclick="excluirSelecionados()"
               class="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-xs font-bold transition">
-              <i class="fa-solid fa-trash"></i> Excluir Selecionados
+              <i class="fa-solid fa-trash"></i> Excluir
             </button>
           </div>
         </div>
 
-        <div id="prod-list" class="space-y-3"></div>
+        <div id="prod-list" class="space-y-2"></div>
       </div>
 
       <!-- NOVO PRODUTO -->
@@ -197,18 +198,52 @@ html{scroll-behavior:smooth;}
       <!-- IMPORTAR JSON -->
       <div id="tab-importar" class="tab-content hidden p-8">
         <h2 class="font-serif text-3xl font-bold mb-1">Importar Produtos</h2>
-        <p class="text-gray-500 text-sm mb-8">Cole o array JSON de produtos pesados aqui. O sistema processará os itens um a um de forma segura.</p>
+        <p class="text-gray-500 text-sm mb-8">Cole o array JSON de produtos aqui.</p>
         <div class="max-w-2xl space-y-5">
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
             <textarea id="import-json" rows="12" placeholder='[ { "nome": "...", "preco": "..." } ]' class="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs font-mono bg-gray-50 resize-none focus:outline-none focus:border-brand"></textarea>
           </div>
           <button onclick="importarJSON()" class="w-full py-4 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-brand transition">
-            <i class="fa-solid fa-file-import mr-2"></i> Iniciar Importação Segura
+            <i class="fa-solid fa-file-import mr-2"></i> Iniciar Importação
           </button>
         </div>
       </div>
 
     </main>
+  </div>
+</div>
+
+<!-- MODAL EDITAR PREÇO -->
+<div id="modal-preco" class="modal fixed inset-0 z-[100] modal-overlay items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl">
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-brand/20 rounded-lg flex items-center justify-center">
+        <i class="fa-solid fa-tag text-brand"></i>
+      </div>
+      <h3 class="font-serif text-xl font-bold">Editar Preço</h3>
+    </div>
+    <div class="space-y-4 mb-6">
+      <div>
+        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Preço Atual (R$)</label>
+        <input id="modal-preco-valor" type="text" placeholder="299,90" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Preço Original / De (deixe em branco para remover)</label>
+        <input id="modal-preco-original" type="text" placeholder="499,90" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+      </div>
+      <div>
+        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Badge Desconto (ex: 20% OFF)</label>
+        <input id="modal-preco-desconto" type="text" placeholder="20% OFF" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button onclick="closeModalPreco()" class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm rounded-xl transition">
+        Cancelar
+      </button>
+      <button onclick="salvarPreco()" class="flex-1 px-4 py-3 bg-brandDark hover:bg-brand text-white font-bold text-sm rounded-xl transition">
+        Salvar
+      </button>
+    </div>
   </div>
 </div>
 
@@ -224,6 +259,7 @@ let SENHA = '';
 let todosOsProdutos = [];
 let modoSelecao = false;
 let selecionados = new Set();
+let editandoId = null;
 
 // ===== AUTH =====
 function doLogin() {
@@ -276,27 +312,45 @@ async function loadProdutos() {
     todosOsProdutos = await apiFetch('/api/admin/produtos');
     renderProdutos();
   } catch (err) {
-    cont.innerHTML = `<p class="text-red-500 text-sm text-center">Erro ao carregar lista.</p>`;
+    cont.innerHTML = `<p class="text-red-500 text-sm">Erro ao carregar: ${err.message}</p>`;
   }
 }
 
 function renderProdutos() {
   const cont = document.getElementById('prod-list');
   cont.innerHTML = todosOsProdutos.map(p => `
-    <div id="card-${p.id}" class="prod-card bg-white rounded-2xl border p-4 flex items-center justify-between ${selecionados.has(p.id) ? 'selecionado' : ''}">
-      ${modoSelecao ? `
-        <input type="checkbox" class="checkbox-sel" ${selecionados.has(p.id) ? 'checked' : ''}
-          onchange="toggleSelecao(${p.id}, this.checked)" style="margin-right:12px;">
-      ` : ''}
-      <div>
-        <h3 class="font-serif font-semibold text-sm text-gray-800">${p.nome} - <span class="text-xs text-gray-400">${p.categoria || 'Geral'}</span></h3>
-        <span class="text-base font-black text-gray-800">R$ ${p.preco}</span>
+    <div id="card-${p.id}" class="prod-card bg-white rounded-xl border p-3 flex items-center justify-between gap-3 ${selecionados.has(p.id) ? 'selecionado' : ''}">
+      <div class="flex items-center gap-3 flex-1">
+        ${modoSelecao ? `
+          <input type="checkbox" class="checkbox-sel" ${selecionados.has(p.id) ? 'checked' : ''}
+            onchange="toggleSelecao(${p.id}, this.checked)">
+        ` : ''}
+        
+        ${p.foto_capa
+          ? `<img src="${p.foto_capa}" class="thumb" alt="" />`
+          : `<div class="thumb flex items-center justify-center bg-brandLight text-lg">👗</div>`
+        }
+
+        <div class="flex-1 min-w-0">
+          <h3 class="font-semibold text-sm text-gray-800 truncate">${p.nome}</h3>
+          <div class="flex items-baseline gap-2 mt-0.5">
+            <span class="font-bold text-gray-800">R$ ${p.preco}</span>
+            ${p.preco_original ? `<span class="text-xs text-gray-400 line-through">R$ ${p.preco_original}</span>` : ''}
+          </div>
+          <p class="text-xs text-gray-400">${p.categoria || 'Geral'}</p>
+        </div>
       </div>
+
       ${!modoSelecao ? `
-        <div class="flex gap-2 shrink-0">
-          <button onclick="editarPreco(${p.id}, '${p.preco}', '${p.preco_original||''}', '${p.desconto||''}')"
-            class="text-gray-500 hover:text-gray-700 text-sm" title="Editar preço"><i class="fa-solid fa-pen"></i></button>
-          <button onclick="excluirProduto(${p.id})" class="text-red-500 hover:text-red-700 text-sm"><i class="fa-solid fa-trash"></i></button>
+        <div class="flex gap-1.5 shrink-0">
+          <button onclick="abrirModalPreco(${p.id}, '${p.preco}', '${p.preco_original||''}', '${p.desconto||''}')"
+            class="text-gray-400 hover:text-gray-600 text-sm p-2 hover:bg-gray-100 rounded" title="Editar preço">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button onclick="excluirProduto(${p.id})"
+            class="text-gray-400 hover:text-red-600 text-sm p-2 hover:bg-red-50 rounded">
+            <i class="fa-solid fa-trash"></i>
+          </button>
         </div>
       ` : ''}
     </div>
@@ -331,22 +385,8 @@ function cancelarSelecao() {
 function toggleSelecao(id, checked) {
   if (checked) selecionados.add(id);
   else selecionados.delete(id);
-  // atualiza visual do card
   const card = document.getElementById(`card-${id}`);
   if (card) card.classList.toggle('selecionado', checked);
-  atualizarBarraSelecao();
-}
-
-function toggleSelecaoCard(id) {
-  const novo = !selecionados.has(id);
-  if (novo) selecionados.add(id);
-  else selecionados.delete(id);
-  const card = document.getElementById(`card-${id}`);
-  if (card) {
-    card.classList.toggle('selecionado', novo);
-    const cb = card.querySelector('input[type=checkbox]');
-    if (cb) cb.checked = novo;
-  }
   atualizarBarraSelecao();
 }
 
@@ -355,7 +395,6 @@ function selecionarTodos(checked) {
   if (checked) todosOsProdutos.forEach(p => selecionados.add(p.id));
   atualizarBarraSelecao();
   renderProdutos();
-  // re-marcar checkbox geral
   document.getElementById('check-todos').checked = checked;
 }
 
@@ -378,20 +417,19 @@ async function excluirSelecionados() {
   if (!confirm(`Deseja desativar ${selecionados.size} produto(s) selecionado(s)?`)) return;
 
   const ids = [...selecionados];
-  let ok = 0, falhas = 0;
+  let ok = 0;
   showToast(`Excluindo ${ids.length} produto(s)...`, 'info');
 
   for (const id of ids) {
     try {
       await apiFetch(`/api/admin/produtos/${id}`, 'DELETE');
       ok++;
-    } catch { falhas++; }
+    } catch { }
   }
 
   cancelarSelecao();
   await loadProdutos();
-  if (falhas === 0) showToast(`✅ ${ok} produto(s) desativado(s).`);
-  else showToast(`⚠️ ${ok} ok, ${falhas} falha(s).`, 'info');
+  showToast(`✅ ${ok} produto(s) desativado(s).`);
 }
 
 // ===== CRUD =====
@@ -406,6 +444,10 @@ async function salvarProduto() {
   try {
     await apiFetch('/api/admin/produtos', 'POST', { nome, descricao: desc, preco, categoria });
     showToast('Produto criado com sucesso!');
+    document.getElementById('f-nome').value = '';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-preco').value = '';
+    document.getElementById('f-categoria').value = '';
     showTab('produtos');
   } catch (err) { showToast(err.message, 'erro'); }
 }
@@ -419,34 +461,36 @@ async function excluirProduto(id) {
   } catch (err) { showToast(err.message, 'erro'); }
 }
 
-async function editarPreco(id, precoAtual, originalAtual, descontoAtual) {
-  const preco = prompt('Preço atual: R$' + precoAtual + '\nNovo preço (ex: 299,90):', precoAtual);
-  if (!preco) return;
-  const original = prompt('Preço riscado "De:" (deixe em branco para remover):', originalAtual);
-  const desconto = prompt('Badge desconto (ex: 20% OFF, deixe em branco para remover):', descontoAtual);
-  try {
-    await apiFetch(`/api/admin/produtos/${id}`, 'PUT', {
-      preco: preco.trim(),
-      preco_original: original?.trim() || null,
-      desconto: desconto?.trim() || null
-    });
-    showToast('✅ Preço atualizado!');
-    loadProdutos();
-  } catch(err) { showToast('Erro: ' + err.message, 'erro'); }
+// ===== MODAL PREÇO =====
+function abrirModalPreco(id, preco, original, desconto) {
+  editandoId = id;
+  document.getElementById('modal-preco-valor').value = preco;
+  document.getElementById('modal-preco-original').value = original;
+  document.getElementById('modal-preco-desconto').value = desconto;
+  document.getElementById('modal-preco').classList.add('show');
 }
 
-async function editarPreco(id, precoAtual, originalAtual, descontoAtual) {
-  const preco = prompt('Preço atual: R$' + precoAtual + '\nNovo preço (ex: 299,90):', precoAtual);
-  if (!preco) return;
-  const original = prompt('Preço riscado "De:" (deixe em branco para remover):', originalAtual);
-  const desconto = prompt('Badge desconto (ex: 20% OFF, deixe em branco para remover):', descontoAtual);
+function closeModalPreco() {
+  document.getElementById('modal-preco').classList.remove('show');
+  editandoId = null;
+}
+
+async function salvarPreco() {
+  if (!editandoId) return;
+  const preco = document.getElementById('modal-preco-valor').value.trim();
+  const original = document.getElementById('modal-preco-original').value.trim();
+  const desconto = document.getElementById('modal-preco-desconto').value.trim();
+
+  if (!preco) { showToast('Preço não pode estar vazio', 'erro'); return; }
+
   try {
-    await apiFetch(`/api/admin/produtos/${id}`, 'PUT', {
-      preco: preco.trim(),
-      preco_original: original?.trim() || null,
-      desconto: desconto?.trim() || null
+    await apiFetch(`/api/admin/produtos/${editandoId}`, 'PUT', {
+      preco,
+      preco_original: original || null,
+      desconto: desconto || null
     });
     showToast('✅ Preço atualizado!');
+    closeModalPreco();
     loadProdutos();
   } catch(err) { showToast('Erro: ' + err.message, 'erro'); }
 }
@@ -460,7 +504,7 @@ async function importarJSON() {
   try {
     lista = JSON.parse(raw);
   } catch (err) {
-    showToast('Erro de sintaxe no JSON. Verifique o fechamento de chaves.', 'erro');
+    showToast('Erro de sintaxe no JSON.', 'erro');
     return;
   }
 
@@ -474,13 +518,12 @@ async function importarJSON() {
   btn.disabled = true;
 
   let importados = 0;
-  let falhas = 0;
 
-  showToast(`Iniciando importação parcelada de ${lista.length} itens...`, 'info');
+  showToast(`Importando ${lista.length} itens...`, 'info');
 
   for (let i = 0; i < lista.length; i++) {
     const item = lista[i];
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Importando item ${i + 1} de ${lista.length}...`;
+    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ${i + 1}/${lista.length}`;
 
     try {
       await apiFetch('/api/admin/produtos', 'POST', {
@@ -495,19 +538,13 @@ async function importarJSON() {
       importados++;
     } catch (err) {
       console.error(`Erro ao importar item ${item.nome || i}:`, err);
-      falhas++;
     }
   }
 
   btn.innerHTML = txtOriginal;
   btn.disabled = false;
   document.getElementById('import-json').value = '';
-
-  if (falhas === 0) {
-    showToast(`✅ Concluído! Todos os ${importados} produtos foram salvos.`);
-  } else {
-    showToast(`⚠️ Concluído com ${importados} sucessos e ${falhas} falhas devido ao tamanho das strings.`, 'info');
-  }
+  showToast(`✅ Importado ${importados}/${lista.length} produtos.`);
   loadDashboard();
 }
 
