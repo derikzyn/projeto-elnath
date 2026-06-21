@@ -15,13 +15,7 @@ html{scroll-behavior:smooth;}
 .no-scrollbar::-webkit-scrollbar{display:none;}
 .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
 #login-screen{transition:opacity .3s;}
-.thumb{width:72px;height:90px;object-fit:cover;object-position:top;border-radius:8px;border:2px solid #E1B1B1;}
-.thumb.selected{border-color:#111;}
 #toast{transition:all .3s cubic-bezier(.34,1.56,.64,1);}
-.modal-overlay{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);}
-.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.drag-over{border-color:#E1B1B1!important;background:#FDF5F5!important;}
 </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen">
@@ -183,7 +177,7 @@ html{scroll-behavior:smooth;}
 </div>
 
 <script>
-const BASE_URL = 'https://projeto-elnath-production.up.railway.app'; // <--- CORREÇÃO AQUI
+const BASE_URL = 'https://projeto-elnath-production.up.railway.app';
 let SENHA = '';
 let todosOsProdutos = [];
 
@@ -219,7 +213,7 @@ function showTab(tab) {
 async function loadDashboard() {
   try {
     const h = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
-    document.getElementById('dash-db-status').textContent = h.status === 'ok' ? '✅ Conectado' : '❌ Desconectado'; // <--- CORREÇÃO AQUI
+    document.getElementById('dash-db-status').textContent = h.status === 'ok' ? '✅ Conectado' : '❌ Desconectado';
     const ps = await apiFetch('/api/admin/produtos');
     document.getElementById('dash-total').textContent = ps.length;
     document.getElementById('dash-oferta').textContent = ps.filter(p => p.desconto).length;
@@ -233,7 +227,7 @@ async function loadProdutos() {
     cont.innerHTML = todosOsProdutos.map(p => `
       <div class="bg-white rounded-2xl border p-4 flex items-center justify-between">
         <div>
-          <h3 class="font-serif font-semibold text-sm text-gray-800">${p.nome} - <span class="text-xs text-gray-400">${p.categoria}</span></h3>
+          <h3 class="font-serif font-semibold text-sm text-gray-800">${p.nome} - <span class="text-xs text-gray-400">${p.categoria || 'Geral'}</span></h3>
           <span class="text-base font-black text-gray-800">R$ ${p.preco}</span>
         </div>
         <button onclick="excluirProduto(${p.id})" class="text-red-500 hover:text-red-700 text-sm"><i class="fa-solid fa-trash"></i></button>
@@ -268,7 +262,6 @@ async function excluirProduto(id) {
   } catch (err) { showToast(err.message, 'erro'); }
 }
 
-// ===== IMPORTAÇÃO SEGURA (MANDA ITEM POR ITEM PARA NÃO DAR OUT OF MEMORY) =====
 async function importarJSON() {
   const raw = document.getElementById('import-json').value.trim();
   if (!raw) { showToast('Cole o arquivo JSON.', 'info'); return; }
