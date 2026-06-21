@@ -122,8 +122,8 @@ html { scroll-behavior:smooth; }
   <!-- Mobile Menu -->
   <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-brandRose/10 px-4 py-5 space-y-3">
     <a href="#catalogo" onclick="filtrar('all');toggleMenu()" class="block font-medium hover:text-brandRose py-1">Ver Todas as Peças</a>
-    <a href="#catalogo" onclick="filtrar('essencial');toggleMenu()" class="block font-medium hover:text-brandRose py-1">✨ Essencial</a>
     <a href="#catalogo" onclick="filtrar('essencial');toggleMenu()" class="block font-medium hover:text-brandRose py-1 font-bold text-brandGold">✨ Linha Essencial</a>
+    <a href="#catalogo" onclick="filtrar('lancamentos');toggleMenu()" class="block font-medium hover:text-brandRose py-1">🔥 Lançamentos</a>
     <a href="#tecnologia" onclick="toggleMenu()" class="block font-medium hover:text-brandRose py-1">Tecnologia Conforto</a>
     <a href="#quiz" onclick="toggleMenu()" class="block font-medium hover:text-brandRose py-1">Descobrir meu Tamanho</a>
     <a href="https://wa.me/5515996216185" target="_blank" class="flex items-center gap-2 font-medium text-green-600 py-1"><i class="fa-brands fa-whatsapp"></i> Falar no WhatsApp</a>
@@ -268,6 +268,9 @@ html { scroll-behavior:smooth; }
     </button>
     <button onclick="filtrar('essencial')" id="btn-essencial" class="filter-btn whitespace-nowrap px-6 py-3 rounded-full text-xs font-bold tracking-wider uppercase transition-all bg-white text-brandDark border border-gray-200 hover:border-brandRose shadow-sm">
       ✨ Linha Essencial
+    </button>
+    <button onclick="filtrar('lancamentos')" id="btn-lancamentos" class="filter-btn whitespace-nowrap px-6 py-3 rounded-full text-xs font-bold tracking-wider uppercase transition-all bg-white text-orange-600 border border-orange-200 hover:border-orange-500 shadow-sm">
+      🔥 Lançamentos
     </button>
     <button onclick="filtrar('oferta')" id="btn-oferta" class="filter-btn whitespace-nowrap px-6 py-3 rounded-full text-xs font-bold tracking-wider uppercase transition-all bg-white text-red-500 border border-red-200 hover:border-red-500 shadow-sm">
       🔥 Ofertas Especiais
@@ -508,6 +511,8 @@ function renderProducts(filter) {
     list = produtos.filter(p => p.desconto);
   } else if (filter === "essencial") {
     list = produtos.filter(p => p.categoria && p.categoria.toLowerCase() === 'essencial');
+  } else if (filter === "lancamentos") {
+    list = produtos.filter(p => p.categoria && p.categoria.toLowerCase() === 'lancamentos');
   }
 
   if (!list || !list.length) { noR.classList.remove("hidden"); return; }
