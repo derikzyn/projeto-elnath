@@ -6,13 +6,13 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Middlewares - LIMITADOS
+// Middlewares
 app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(express.static(__dirname));
 
-// Pool OTIMIZADO - SEM SSL FORÇADO
+// Pool OTIMIZADO
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   max: 2,
@@ -41,21 +41,43 @@ async function initDB() {
       );
     `);
     console.log('✅ Banco OK');
-    return true;
   } catch (err) {
     console.error('⚠️ Erro no banco:', err.message);
-    return false;
   }
 }
 
-// AUTH
+// AUTH - MELHORADO COM DEBUG
 function auth(req, res, next) {
-  const senha = req.headers['x-admin-senha'] || req.query.senha || req.body.senha;
-  if (senha !== (process.env.ADMIN_SENHA || 'esquenta2026')) {
-    return res.status(401).json({ erro: 'Não autorizado' });
+  const senha = (req.headers['x-admin-senha'] || req.query.senha || req.body.senha || '').trim();
+  const SENHA_CORRETA = (process.env.ADMIN_SENHA || 'esquenta2026').trim();
+  
+  console.log('=== AUTH DEBUG ===');
+  console.log('Senha recebida:', senha);
+  console.log('Senha esperada:', SENHA_CORRETA);
+  console.log('Match:', senha === SENHA_CORRETA);
+  
+  if (!senha || senha !== SENHA_CORRETA) {
+    return res.status(401).json({ erro: 'Senha incorreta' });
   }
+  
   next();
 }
+
+// ⭐ ROTA DE DEBUG (REMOVER DEPOIS)
+app.get('/api/debug-auth', (req, res) => {
+  const senha = (req.headers['x-admin-senha'] || req.query.senha || '').trim();
+  const esperada = (process.env.ADMIN_SENHA || 'esquenta2026').trim();
+  
+  res.json({
+    senhaRecebida: senha || '[VAZIA]',
+    senhaEsperada: esperada,
+    tamanhoRecebida: senha.length,
+    tamanhoEsperada: esperada.length,
+    match: senha === esperada,
+    bytesRecebida: senha.split('').map(c => c.charCodeAt(0)),
+    bytesEsperada: esperada.split('').map(c => c.charCodeAt(0))
+  });
+});
 
 // ROTAS PÚBLICAS
 app.get('/api/health', async (req, res) => {
@@ -63,7 +85,7 @@ app.get('/api/health', async (req, res) => {
     await pool.query('SELECT 1');
     res.json({ status: 'ok' });
   } catch (e) {
-    res.status(500).json({ status: 'erro', msg: e.message });
+    res.status(500).json({ status: 'erro' });
   }
 });
 
@@ -76,36 +98,23 @@ app.get('/api/produtos', async (req, res) => {
   }
 });
 
-// ADMIN - IMPORTAÇÃO PARCELADA
+// ADMIN - IMPORTAÇÃO
 app.post('/api/admin/importar', auth, async (req, res) => {
   const produtos = req.body;
-  if (!Array.isArray(produtos)) {
-    return res.status(400).json({ erro: 'Deve ser array' });
-  }
+  if (!Array.isArray(produtos)) return res.status(400).json({ erro: 'Array esperado' });
 
   let ok = 0;
-  let erros = [];
-
   try {
     for (const p of produtos) {
       if (!p.nome || !p.preco) continue;
-      
-      try {
-        await pool.query(
-          'INSERT INTO produtos (nome, descricao, preco, fotos, categoria) VALUES ($1, $2, $3, $4, $5)',
-          [p.nome, p.descricao || '', p.preco, p.fotos || [], p.categoria || 'Geral']
-        );
-        ok++;
-      } catch (err) {
-        erros.push(p.nome);
-      }
-      
-      if (ok % 5 === 0) {
-        await new Promise(r => setTimeout(r, 50));
-      }
+      await pool.query(
+        'INSERT INTO produtos (nome, descricao, preco, fotos, categoria) VALUES ($1, $2, $3, $4, $5)',
+        [p.nome, p.descricao || '', p.preco, p.fotos || [], p.categoria || 'Geral']
+      );
+      ok++;
+      if (ok % 5 === 0) await new Promise(r => setTimeout(r, 50));
     }
-    
-    res.json({ sucesso: true, importados: ok, erros: erros.length > 0 ? erros : undefined });
+    res.json({ sucesso: true, importados: ok });
   } catch (e) {
     res.status(500).json({ erro: e.message });
   }
@@ -148,16 +157,10 @@ app.delete('/api/admin/produtos/:id', auth, async (req, res) => {
 });
 
 // START
-initDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Servidor na porta ${PORT}`);
-  });
+initDB();
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Servidor na porta ${PORT}`);
 });
 
-process.on('uncaughtException', (err) => {
-  console.error('❌ Erro:', err.message);
-});
-
-process.on('unhandledRejection', (err) => {
-  console.error('❌ Rejeição:', err.message);
-});
+process.on('uncaughtException', (err) => console.error('❌ Erro:', err.message));
+process.on('unhandledRejection', (err) => console.error('❌ Rejeição:', err.message));
