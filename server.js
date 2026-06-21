@@ -7,7 +7,8 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Middlewares
-app.use(cors());
+// CORREÇÃO 1: CORS explícito para garantir acesso livre da vitrine
+app.use(cors({ origin: '*' })); 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use(express.static(__dirname));
@@ -51,11 +52,6 @@ function auth(req, res, next) {
   const senha = (req.headers['x-admin-senha'] || req.query.senha || req.body.senha || '').trim();
   const SENHA_CORRETA = (process.env.ADMIN_SENHA || 'esquenta2026').trim();
   
-  console.log('=== AUTH DEBUG ===');
-  console.log('Senha recebida:', senha);
-  console.log('Senha esperada:', SENHA_CORRETA);
-  console.log('Match:', senha === SENHA_CORRETA);
-  
   if (!senha || senha !== SENHA_CORRETA) {
     return res.status(401).json({ erro: 'Senha incorreta' });
   }
@@ -63,23 +59,7 @@ function auth(req, res, next) {
   next();
 }
 
-// ⭐ ROTA DE DEBUG (REMOVER DEPOIS)
-app.get('/api/debug-auth', (req, res) => {
-  const senha = (req.headers['x-admin-senha'] || req.query.senha || '').trim();
-  const esperada = (process.env.ADMIN_SENHA || 'esquenta2026').trim();
-  
-  res.json({
-    senhaRecebida: senha || '[VAZIA]',
-    senhaEsperada: esperada,
-    tamanhoRecebida: senha.length,
-    tamanhoEsperada: esperada.length,
-    match: senha === esperada,
-    bytesRecebida: senha.split('').map(c => c.charCodeAt(0)),
-    bytesEsperada: esperada.split('').map(c => c.charCodeAt(0))
-  });
-});
-
-// ROTAS PÚBLICAS
+// ROTAS PÚBLICAS (Acesso da Vitrine - index.html)
 app.get('/api/health', async (req, res) => {
   try {
     await pool.query('SELECT 1');
@@ -91,7 +71,8 @@ app.get('/api/health', async (req, res) => {
 
 app.get('/api/produtos', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT id, nome, descricao, preco, fotos, categoria FROM produtos WHERE ativo=TRUE LIMIT 50');
+    // CORREÇÃO 2: Adicionado preco_original e desconto. Ordenado por produtos mais recentes.
+    const { rows } = await pool.query('SELECT id, nome, descricao, preco, preco_original, desconto, fotos, categoria FROM produtos WHERE ativo=TRUE ORDER BY id DESC');
     res.json(rows);
   } catch (e) {
     res.status(500).json({ erro: e.message });
@@ -107,9 +88,10 @@ app.post('/api/admin/importar', auth, async (req, res) => {
   try {
     for (const p of produtos) {
       if (!p.nome || !p.preco) continue;
+      // CORREÇÃO 3: Agora salva os dados de promoção corretamente no banco
       await pool.query(
-        'INSERT INTO produtos (nome, descricao, preco, fotos, categoria) VALUES ($1, $2, $3, $4, $5)',
-        [p.nome, p.descricao || '', p.preco, p.fotos || [], p.categoria || 'Geral']
+        'INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, fotos, categoria) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [p.nome, p.descricao || '', p.preco, p.preco_original || null, p.desconto || null, p.fotos || [], p.categoria || 'Geral']
       );
       ok++;
       if (ok % 5 === 0) await new Promise(r => setTimeout(r, 50));
@@ -123,7 +105,8 @@ app.post('/api/admin/importar', auth, async (req, res) => {
 // ADMIN - LISTAR
 app.get('/api/admin/produtos', auth, async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM produtos LIMIT 30');
+    // CORREÇÃO 4: Retirado o 'LIMIT 30' para não ocultar produtos do painel e ordenado por mais novo
+    const { rows } = await pool.query('SELECT * FROM produtos ORDER BY id DESC');
     res.json(rows);
   } catch (e) {
     res.status(500).json({ erro: e.message });
@@ -132,13 +115,13 @@ app.get('/api/admin/produtos', auth, async (req, res) => {
 
 // ADMIN - CRIAR
 app.post('/api/admin/produtos', auth, async (req, res) => {
-  const { nome, descricao, preco, categoria, fotos } = req.body;
+  const { nome, descricao, preco, preco_original, desconto, categoria, fotos } = req.body;
   if (!nome || !preco) return res.status(400).json({ erro: 'Nome e preço obrigatórios' });
   
   try {
     const { rows } = await pool.query(
-      'INSERT INTO produtos (nome, descricao, preco, categoria, fotos) VALUES ($1, $2, $3, $4, $5) RETURNING id, nome',
-      [nome, descricao || '', preco, categoria || 'Geral', fotos || []]
+      'INSERT INTO produtos (nome, descricao, preco, preco_original, desconto, categoria, fotos) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, nome',
+      [nome, descricao || '', preco, preco_original || null, desconto || null, categoria || 'Geral', fotos || []]
     );
     res.status(201).json(rows[0]);
   } catch (e) {
