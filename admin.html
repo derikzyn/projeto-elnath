@@ -283,43 +283,22 @@ async function loadProdutos() {
 function renderProdutos() {
   const cont = document.getElementById('prod-list');
   cont.innerHTML = todosOsProdutos.map(p => `
-    <div id="card-${p.id}" class="prod-card bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 ${selecionados.has(p.id) ? 'selecionado' : ''}">
-
+    <div id="card-${p.id}" class="prod-card bg-white rounded-2xl border p-4 flex items-center justify-between ${selecionados.has(p.id) ? 'selecionado' : ''}">
       ${modoSelecao ? `
-        <div class="shrink-0 flex items-center justify-center w-6">
-          <input type="checkbox" class="checkbox-sel" ${selecionados.has(p.id) ? 'checked' : ''}
-            onchange="toggleSelecao(${p.id}, this.checked)">
-        </div>` : ''}
-
-      ${p.foto_capa
-        ? `<img src="${p.foto_capa}" class="thumb shrink-0" alt="" onclick="${modoSelecao ? `toggleSelecaoCard(${p.id})` : ''}" style="${modoSelecao ? 'cursor:pointer;' : ''}">`
-        : `<div class="shrink-0 flex items-center justify-center" style="width:72px;height:90px;background:#fdf5f5;border-radius:8px;font-size:1.5rem;border:2px solid #E1B1B1;" onclick="${modoSelecao ? `toggleSelecaoCard(${p.id})` : ''}">👗</div>`
-      }
-
-      <div class="flex-grow min-w-0 ${modoSelecao ? 'cursor-pointer' : ''}" onclick="${modoSelecao ? `toggleSelecaoCard(${p.id})` : ''}">
-        <div class="flex items-center gap-2 flex-wrap mb-1">
-          <h3 class="font-serif font-semibold text-sm text-gray-800 truncate">${p.nome}</h3>
-          ${p.desconto ? `<span style="background:#fee2e2;color:#ef4444;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">${p.desconto}</span>` : ''}
-          ${!p.ativo ? `<span style="background:#f3f4f6;color:#9ca3af;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">INATIVO</span>` : ''}
-        </div>
-        <div class="flex items-baseline gap-2">
-          <span class="text-base font-black text-gray-800">R$ ${p.preco}</span>
-          ${p.preco_original ? `<span class="text-xs text-gray-400 line-through">R$ ${p.preco_original}</span>` : ''}
-        </div>
-        <p class="text-xs text-gray-400 mt-0.5">${p.categoria || 'Geral'} · ${p.num_fotos || 0} foto(s)</p>
+        <input type="checkbox" class="checkbox-sel" ${selecionados.has(p.id) ? 'checked' : ''}
+          onchange="toggleSelecao(${p.id}, this.checked)" style="margin-right:12px;">
+      ` : ''}
+      <div>
+        <h3 class="font-serif font-semibold text-sm text-gray-800">${p.nome} - <span class="text-xs text-gray-400">${p.categoria || 'Geral'}</span></h3>
+        <span class="text-base font-black text-gray-800">R$ ${p.preco}</span>
       </div>
-
       ${!modoSelecao ? `
         <div class="flex gap-2 shrink-0">
           <button onclick="editarPreco(${p.id}, '${p.preco}', '${p.preco_original||''}', '${p.desconto||''}')"
-            class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition" title="Editar preço">
-            ✏️ Preço
-          </button>
-          <button onclick="excluirProduto(${p.id})"
-            class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold rounded-lg transition" title="Desativar">
-            🗑️
-          </button>
-        </div>` : ''}
+            class="text-gray-500 hover:text-gray-700 text-sm" title="Editar preço"><i class="fa-solid fa-pen"></i></button>
+          <button onclick="excluirProduto(${p.id})" class="text-red-500 hover:text-red-700 text-sm"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      ` : ''}
     </div>
   `).join('');
 }
@@ -438,6 +417,22 @@ async function excluirProduto(id) {
     showToast('Produto desativado.');
     loadProdutos();
   } catch (err) { showToast(err.message, 'erro'); }
+}
+
+async function editarPreco(id, precoAtual, originalAtual, descontoAtual) {
+  const preco = prompt('Preço atual: R$' + precoAtual + '\nNovo preço (ex: 299,90):', precoAtual);
+  if (!preco) return;
+  const original = prompt('Preço riscado "De:" (deixe em branco para remover):', originalAtual);
+  const desconto = prompt('Badge desconto (ex: 20% OFF, deixe em branco para remover):', descontoAtual);
+  try {
+    await apiFetch(`/api/admin/produtos/${id}`, 'PUT', {
+      preco: preco.trim(),
+      preco_original: original?.trim() || null,
+      desconto: desconto?.trim() || null
+    });
+    showToast('✅ Preço atualizado!');
+    loadProdutos();
+  } catch(err) { showToast('Erro: ' + err.message, 'erro'); }
 }
 
 async function editarPreco(id, precoAtual, originalAtual, descontoAtual) {
