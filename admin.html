@@ -15,11 +15,21 @@ html{scroll-behavior:smooth;}
 .no-scrollbar::-webkit-scrollbar{display:none;}
 .no-scrollbar{-ms-overflow-style:none;scrollbar-width:none;}
 #login-screen{transition:opacity .3s;}
+.thumb{width:72px;height:90px;object-fit:cover;object-position:top;border-radius:8px;border:2px solid #E1B1B1;}
 #toast{transition:all .3s cubic-bezier(.34,1.56,.64,1);}
+.modal-overlay{background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);}
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.drag-over{border-color:#E1B1B1!important;background:#FDF5F5!important;}
+.prod-card{transition:box-shadow .15s,border-color .15s;}
+.prod-card.selecionado{border-color:#E1B1B1!important;background:#FDF5F5;}
+.checkbox-sel{width:18px;height:18px;accent-color:#111;cursor:pointer;border-radius:4px;}
+#barra-selecao{transition:all .25s cubic-bezier(.34,1.56,.64,1);}
 </style>
 </head>
 <body class="bg-gray-100 font-sans min-h-screen">
 
+<!-- LOGIN -->
 <div id="login-screen" class="fixed inset-0 z-50 bg-brandDark flex items-center justify-center p-4">
   <div class="bg-white rounded-3xl p-10 w-full max-w-sm shadow-2xl text-center">
     <div class="w-16 h-16 bg-brand/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -36,8 +46,11 @@ html{scroll-behavior:smooth;}
   </div>
 </div>
 
+<!-- APP -->
 <div id="app" class="hidden min-h-screen">
   <div class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR -->
     <aside class="w-64 bg-brandDark text-white flex flex-col shrink-0">
       <div class="p-6 border-b border-white/10">
         <div class="flex items-center gap-3">
@@ -50,7 +63,6 @@ html{scroll-behavior:smooth;}
           </div>
         </div>
       </div>
-
       <nav class="flex-grow p-4 space-y-1">
         <button onclick="showTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 transition text-left">
           <i class="fa-solid fa-chart-line w-4"></i> Dashboard
@@ -65,7 +77,6 @@ html{scroll-behavior:smooth;}
           <i class="fa-solid fa-file-import w-4"></i> Importar JSON
         </button>
       </nav>
-
       <div class="p-4 border-t border-white/10">
         <a href="/" target="_blank" class="flex items-center gap-2 px-4 py-2 text-xs text-white/50 hover:text-white transition">
           <i class="fa-solid fa-arrow-up-right-from-square"></i> Ver Site
@@ -76,7 +87,10 @@ html{scroll-behavior:smooth;}
       </div>
     </aside>
 
+    <!-- MAIN -->
     <main class="flex-grow overflow-y-auto bg-gray-50">
+
+      <!-- DASHBOARD -->
       <div id="tab-dashboard" class="tab-content p-8">
         <h2 class="font-serif text-3xl font-bold mb-2">Dashboard</h2>
         <p class="text-gray-500 text-sm mb-8">Visão geral da loja.</p>
@@ -117,16 +131,41 @@ html{scroll-behavior:smooth;}
         </div>
       </div>
 
+      <!-- PRODUTOS -->
       <div id="tab-produtos" class="tab-content hidden p-8">
-        <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center justify-between mb-4">
           <div>
             <h2 class="font-serif text-3xl font-bold">Produtos</h2>
             <p class="text-gray-500 text-sm">Gerencie todos os conjuntos da loja.</p>
           </div>
+          <button onclick="toggleModoSelecao()" id="btn-modo-sel"
+            class="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:border-brand hover:text-brandDark transition">
+            <i class="fa-solid fa-check-square"></i> Selecionar
+          </button>
         </div>
+
+        <!-- BARRA DE AÇÕES EM MASSA -->
+        <div id="barra-selecao" class="hidden mb-4 bg-brandDark text-white rounded-2xl px-5 py-3.5 flex items-center justify-between shadow-lg">
+          <div class="flex items-center gap-3">
+            <input type="checkbox" id="check-todos" class="checkbox-sel" onchange="selecionarTodos(this.checked)" title="Selecionar todos">
+            <span class="text-sm font-semibold"><span id="qtd-sel">0</span> selecionado(s)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="cancelarSelecao()"
+              class="px-4 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-bold transition">
+              Cancelar
+            </button>
+            <button onclick="excluirSelecionados()"
+              class="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-xs font-bold transition">
+              <i class="fa-solid fa-trash"></i> Excluir Selecionados
+            </button>
+          </div>
+        </div>
+
         <div id="prod-list" class="space-y-3"></div>
       </div>
 
+      <!-- NOVO PRODUTO -->
       <div id="tab-novo" class="tab-content hidden p-8">
         <h2 class="font-serif text-3xl font-bold mb-1" id="form-title">Novo Produto</h2>
         <div class="max-w-2xl space-y-6">
@@ -134,43 +173,46 @@ html{scroll-behavior:smooth;}
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
             <div>
               <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Nome do Conjunto *</label>
-              <input id="f-nome" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none">
+              <input id="f-nome" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
             </div>
             <div>
               <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Descrição</label>
-              <textarea id="f-desc" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none resize-none"></textarea>
+              <textarea id="f-desc" rows="3" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand resize-none"></textarea>
             </div>
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Preço *</label>
-                <input id="f-preco" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none">
+                <input id="f-preco" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Categoria</label>
-                <input id="f-categoria" type="text" placeholder="Ex: essencial, Geral" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none">
+                <input id="f-categoria" type="text" placeholder="Ex: essencial, Geral" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
               </div>
             </div>
           </div>
-          <button onclick="salvarProduto()" id="btn-salvar" class="w-full py-4 bg-brandDark text-white font-bold rounded-xl transition">Salvar Produto</button>
+          <button onclick="salvarProduto()" id="btn-salvar" class="w-full py-4 bg-brandDark text-white font-bold rounded-xl hover:bg-brand transition">Salvar Produto</button>
         </div>
       </div>
 
+      <!-- IMPORTAR JSON -->
       <div id="tab-importar" class="tab-content hidden p-8">
         <h2 class="font-serif text-3xl font-bold mb-1">Importar Produtos</h2>
         <p class="text-gray-500 text-sm mb-8">Cole o array JSON de produtos pesados aqui. O sistema processará os itens um a um de forma segura.</p>
         <div class="max-w-2xl space-y-5">
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <textarea id="import-json" rows="12" placeholder='[ { "nome": "...", "preco": "..." } ]' class="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs font-mono bg-gray-50 resize-none focus:outline-none"></textarea>
+            <textarea id="import-json" rows="12" placeholder='[ { "nome": "...", "preco": "..." } ]' class="w-full px-4 py-3 border border-gray-200 rounded-xl text-xs font-mono bg-gray-50 resize-none focus:outline-none focus:border-brand"></textarea>
           </div>
-          <button onclick="importarJSON()" class="w-full py-4 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl transition">
+          <button onclick="importarJSON()" class="w-full py-4 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-brand transition">
             <i class="fa-solid fa-file-import mr-2"></i> Iniciar Importação Segura
           </button>
         </div>
       </div>
+
     </main>
   </div>
 </div>
 
+<!-- TOAST -->
 <div id="toast" class="fixed bottom-6 right-6 z-[60] bg-brandDark text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 translate-y-24 opacity-0 pointer-events-none transition-all">
   <i id="toast-icon" class="fa-solid fa-circle-check text-brand text-lg"></i>
   <span id="toast-msg" class="text-sm font-semibold"></span>
@@ -180,7 +222,10 @@ html{scroll-behavior:smooth;}
 const BASE_URL = 'https://projeto-elnath-production.up.railway.app';
 let SENHA = '';
 let todosOsProdutos = [];
+let modoSelecao = false;
+let selecionados = new Set();
 
+// ===== AUTH =====
 function doLogin() {
   const inp = document.getElementById('senha-input').value.trim();
   if (!inp) return;
@@ -203,6 +248,7 @@ function doLogin() {
 
 function doLogout() { SENHA = ''; location.reload(); }
 
+// ===== TABS =====
 function showTab(tab) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
   document.getElementById(`tab-${tab}`).classList.remove('hidden');
@@ -210,6 +256,7 @@ function showTab(tab) {
   if (tab === 'dashboard') loadDashboard();
 }
 
+// ===== DASHBOARD =====
 async function loadDashboard() {
   try {
     const h = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
@@ -220,24 +267,155 @@ async function loadDashboard() {
   } catch {}
 }
 
+// ===== PRODUTOS =====
 async function loadProdutos() {
   const cont = document.getElementById('prod-list');
+  selecionados.clear();
+  atualizarBarraSelecao();
   try {
     todosOsProdutos = await apiFetch('/api/admin/produtos');
-    cont.innerHTML = todosOsProdutos.map(p => `
-      <div class="bg-white rounded-2xl border p-4 flex items-center justify-between">
-        <div>
-          <h3 class="font-serif font-semibold text-sm text-gray-800">${p.nome} - <span class="text-xs text-gray-400">${p.categoria || 'Geral'}</span></h3>
-          <span class="text-base font-black text-gray-800">R$ ${p.preco}</span>
-        </div>
-        <button onclick="excluirProduto(${p.id})" class="text-red-500 hover:text-red-700 text-sm"><i class="fa-solid fa-trash"></i></button>
-      </div>
-    `).join('');
+    renderProdutos();
   } catch (err) {
     cont.innerHTML = `<p class="text-red-500 text-sm text-center">Erro ao carregar lista.</p>`;
   }
 }
 
+function renderProdutos() {
+  const cont = document.getElementById('prod-list');
+  cont.innerHTML = todosOsProdutos.map(p => `
+    <div id="card-${p.id}" class="prod-card bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 ${selecionados.has(p.id) ? 'selecionado' : ''}">
+
+      ${modoSelecao ? `
+        <div class="shrink-0 flex items-center justify-center w-6">
+          <input type="checkbox" class="checkbox-sel" ${selecionados.has(p.id) ? 'checked' : ''}
+            onchange="toggleSelecao(${p.id}, this.checked)">
+        </div>` : ''}
+
+      ${p.foto_capa
+        ? `<img src="${p.foto_capa}" class="thumb shrink-0" alt="" onclick="${modoSelecao ? `toggleSelecaoCard(${p.id})` : ''}" style="${modoSelecao ? 'cursor:pointer;' : ''}">`
+        : `<div class="shrink-0 flex items-center justify-center" style="width:72px;height:90px;background:#fdf5f5;border-radius:8px;font-size:1.5rem;border:2px solid #E1B1B1;" onclick="${modoSelecao ? `toggleSelecaoCard(${p.id})` : ''}">👗</div>`
+      }
+
+      <div class="flex-grow min-w-0 ${modoSelecao ? 'cursor-pointer' : ''}" onclick="${modoSelecao ? `toggleSelecaoCard(${p.id})` : ''}">
+        <div class="flex items-center gap-2 flex-wrap mb-1">
+          <h3 class="font-serif font-semibold text-sm text-gray-800 truncate">${p.nome}</h3>
+          ${p.desconto ? `<span style="background:#fee2e2;color:#ef4444;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">${p.desconto}</span>` : ''}
+          ${!p.ativo ? `<span style="background:#f3f4f6;color:#9ca3af;font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;">INATIVO</span>` : ''}
+        </div>
+        <div class="flex items-baseline gap-2">
+          <span class="text-base font-black text-gray-800">R$ ${p.preco}</span>
+          ${p.preco_original ? `<span class="text-xs text-gray-400 line-through">R$ ${p.preco_original}</span>` : ''}
+        </div>
+        <p class="text-xs text-gray-400 mt-0.5">${p.categoria || 'Geral'} · ${p.num_fotos || 0} foto(s)</p>
+      </div>
+
+      ${!modoSelecao ? `
+        <div class="flex gap-2 shrink-0">
+          <button onclick="editarPreco(${p.id}, '${p.preco}', '${p.preco_original||''}', '${p.desconto||''}')"
+            class="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg transition" title="Editar preço">
+            ✏️ Preço
+          </button>
+          <button onclick="excluirProduto(${p.id})"
+            class="px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-bold rounded-lg transition" title="Desativar">
+            🗑️
+          </button>
+        </div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ===== SELEÇÃO MÚLTIPLA =====
+function toggleModoSelecao() {
+  modoSelecao = !modoSelecao;
+  selecionados.clear();
+  const btn = document.getElementById('btn-modo-sel');
+  if (modoSelecao) {
+    btn.innerHTML = '<i class="fa-solid fa-xmark"></i> Cancelar';
+    btn.classList.add('border-brand', 'text-brandDark');
+  } else {
+    btn.innerHTML = '<i class="fa-solid fa-check-square"></i> Selecionar';
+    btn.classList.remove('border-brand', 'text-brandDark');
+  }
+  atualizarBarraSelecao();
+  renderProdutos();
+}
+
+function cancelarSelecao() {
+  modoSelecao = false;
+  selecionados.clear();
+  document.getElementById('btn-modo-sel').innerHTML = '<i class="fa-solid fa-check-square"></i> Selecionar';
+  document.getElementById('btn-modo-sel').classList.remove('border-brand', 'text-brandDark');
+  atualizarBarraSelecao();
+  renderProdutos();
+}
+
+function toggleSelecao(id, checked) {
+  if (checked) selecionados.add(id);
+  else selecionados.delete(id);
+  // atualiza visual do card
+  const card = document.getElementById(`card-${id}`);
+  if (card) card.classList.toggle('selecionado', checked);
+  atualizarBarraSelecao();
+}
+
+function toggleSelecaoCard(id) {
+  const novo = !selecionados.has(id);
+  if (novo) selecionados.add(id);
+  else selecionados.delete(id);
+  const card = document.getElementById(`card-${id}`);
+  if (card) {
+    card.classList.toggle('selecionado', novo);
+    const cb = card.querySelector('input[type=checkbox]');
+    if (cb) cb.checked = novo;
+  }
+  atualizarBarraSelecao();
+}
+
+function selecionarTodos(checked) {
+  selecionados.clear();
+  if (checked) todosOsProdutos.forEach(p => selecionados.add(p.id));
+  atualizarBarraSelecao();
+  renderProdutos();
+  // re-marcar checkbox geral
+  document.getElementById('check-todos').checked = checked;
+}
+
+function atualizarBarraSelecao() {
+  const barra = document.getElementById('barra-selecao');
+  const qtd = document.getElementById('qtd-sel');
+  if (modoSelecao) {
+    barra.classList.remove('hidden');
+    qtd.textContent = selecionados.size;
+    if (document.getElementById('check-todos')) {
+      document.getElementById('check-todos').checked = selecionados.size > 0 && selecionados.size === todosOsProdutos.length;
+    }
+  } else {
+    barra.classList.add('hidden');
+  }
+}
+
+async function excluirSelecionados() {
+  if (selecionados.size === 0) { showToast('Nenhum produto selecionado.', 'info'); return; }
+  if (!confirm(`Deseja desativar ${selecionados.size} produto(s) selecionado(s)?`)) return;
+
+  const ids = [...selecionados];
+  let ok = 0, falhas = 0;
+  showToast(`Excluindo ${ids.length} produto(s)...`, 'info');
+
+  for (const id of ids) {
+    try {
+      await apiFetch(`/api/admin/produtos/${id}`, 'DELETE');
+      ok++;
+    } catch { falhas++; }
+  }
+
+  cancelarSelecao();
+  await loadProdutos();
+  if (falhas === 0) showToast(`✅ ${ok} produto(s) desativado(s).`);
+  else showToast(`⚠️ ${ok} ok, ${falhas} falha(s).`, 'info');
+}
+
+// ===== CRUD =====
 async function salvarProduto() {
   const nome = document.getElementById('f-nome').value.trim();
   const desc = document.getElementById('f-desc').value.trim();
@@ -262,6 +440,23 @@ async function excluirProduto(id) {
   } catch (err) { showToast(err.message, 'erro'); }
 }
 
+async function editarPreco(id, precoAtual, originalAtual, descontoAtual) {
+  const preco = prompt('Preço atual: R$' + precoAtual + '\nNovo preço (ex: 299,90):', precoAtual);
+  if (!preco) return;
+  const original = prompt('Preço riscado "De:" (deixe em branco para remover):', originalAtual);
+  const desconto = prompt('Badge desconto (ex: 20% OFF, deixe em branco para remover):', descontoAtual);
+  try {
+    await apiFetch(`/api/admin/produtos/${id}`, 'PUT', {
+      preco: preco.trim(),
+      preco_original: original?.trim() || null,
+      desconto: desconto?.trim() || null
+    });
+    showToast('✅ Preço atualizado!');
+    loadProdutos();
+  } catch(err) { showToast('Erro: ' + err.message, 'erro'); }
+}
+
+// ===== IMPORTAR JSON =====
 async function importarJSON() {
   const raw = document.getElementById('import-json').value.trim();
   if (!raw) { showToast('Cole o arquivo JSON.', 'info'); return; }
@@ -321,6 +516,7 @@ async function importarJSON() {
   loadDashboard();
 }
 
+// ===== API =====
 async function apiFetch(url, method = 'GET', body = null) {
   const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-senha': SENHA } };
   if (body) opts.body = JSON.stringify(body);
@@ -332,6 +528,7 @@ async function apiFetch(url, method = 'GET', body = null) {
   return data;
 }
 
+// ===== TOAST =====
 let _tt;
 function showToast(msg, tipo = 'ok') {
   clearTimeout(_tt);
