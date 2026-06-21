@@ -81,7 +81,7 @@ html { scroll-behavior:smooth; }
 <!-- ===== TOP BAR ===== -->
 <div class="bg-brandDark text-white py-2.5 text-center text-xs tracking-widest font-semibold uppercase px-4">
   <i class="fa-solid fa-truck-fast text-brandRose mr-2"></i>
-  Frete grátis acima de R$299&nbsp;&nbsp;|&nbsp;&nbsp;
+  Frete grátis acima de R$299 para Sorocaba e Votorantim&nbsp;&nbsp;|&nbsp;&nbsp;
   <i class="fa-solid fa-lock text-brandRose mr-1"></i>Compra 100% Segura&nbsp;&nbsp;|&nbsp;&nbsp;
   <i class="fa-brands fa-whatsapp text-brandRose mr-1"></i>Atendimento via WhatsApp
 </div>
@@ -122,6 +122,7 @@ html { scroll-behavior:smooth; }
   <!-- Mobile Menu -->
   <div id="mobile-menu" class="hidden md:hidden bg-white border-t border-brandRose/10 px-4 py-5 space-y-3">
     <a href="#catalogo" onclick="filtrar('all');toggleMenu()" class="block font-medium hover:text-brandRose py-1">Ver Todas as Peças</a>
+    <a href="#catalogo" onclick="filtrar('essencial');toggleMenu()" class="block font-medium hover:text-brandRose py-1">✨ Essencial</a>
     <a href="#catalogo" onclick="filtrar('essencial');toggleMenu()" class="block font-medium hover:text-brandRose py-1 font-bold text-brandGold">✨ Linha Essencial</a>
     <a href="#tecnologia" onclick="toggleMenu()" class="block font-medium hover:text-brandRose py-1">Tecnologia Conforto</a>
     <a href="#quiz" onclick="toggleMenu()" class="block font-medium hover:text-brandRose py-1">Descobrir meu Tamanho</a>
@@ -469,7 +470,8 @@ let qA = {};
 // ── Carrega produtos vindos do banco do Railway ──────────
 async function carregarProdutos() {
   try {
-    const res = await fetch('https://projeto-elnath-production.up.railway.app/api/produtos');
+    const apiUrl = window.location.origin + '/api/produtos';
+    const res = await fetch(apiUrl);
     if (!res.ok) throw new Error('Falha na API: ' + res.status);
     produtos = await res.json();
   } catch (err) {
