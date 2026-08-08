@@ -9,8 +9,8 @@ const PORT = process.env.PORT || 8080;
 // Middlewares
 // CORREÇÃO 1: CORS explícito para garantir acesso livre da vitrine
 app.use(cors({ origin: '*' })); 
-app.use(express.json({ limit: '5mb' }));
-app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(__dirname));
 
 // Pool OTIMIZADO
@@ -75,6 +75,7 @@ app.get('/api/produtos', async (req, res) => {
     const { rows } = await pool.query('SELECT id, nome, descricao, preco, preco_original, desconto, fotos, categoria FROM produtos WHERE ativo=TRUE ORDER BY id DESC');
     res.json(rows);
   } catch (e) {
+    console.error('❌ Erro ao listar produtos (público):', e.message);
     res.status(500).json({ erro: e.message });
   }
 });
@@ -98,6 +99,7 @@ app.post('/api/admin/importar', auth, async (req, res) => {
     }
     res.json({ sucesso: true, importados: ok });
   } catch (e) {
+    console.error('❌ Erro ao importar produtos:', e.message);
     res.status(500).json({ erro: e.message });
   }
 });
@@ -109,6 +111,7 @@ app.get('/api/admin/produtos', auth, async (req, res) => {
     const { rows } = await pool.query('SELECT * FROM produtos ORDER BY id DESC');
     res.json(rows);
   } catch (e) {
+    console.error('❌ Erro ao listar produtos (admin):', e.message);
     res.status(500).json({ erro: e.message });
   }
 });
@@ -125,6 +128,7 @@ app.post('/api/admin/produtos', auth, async (req, res) => {
     );
     res.status(201).json(rows[0]);
   } catch (e) {
+    console.error('❌ Erro ao criar produto:', e.message);
     res.status(500).json({ erro: e.message });
   }
 });
@@ -135,6 +139,72 @@ app.delete('/api/admin/produtos/:id', auth, async (req, res) => {
     await pool.query('UPDATE produtos SET ativo=FALSE WHERE id=$1', [req.params.id]);
     res.json({ sucesso: true });
   } catch (e) {
+    console.error('❌ Erro ao deletar produto:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+// ADMIN - EDITAR (nome, descrição, preço, categoria, fotos — tudo em um só endpoint)
+app.put('/api/admin/produtos/:id', auth, async (req, res) => {
+  const { nome, descricao, preco, preco_original, desconto, categoria, fotos } = req.body;
+  try {
+    const atual = await pool.query('SELECT * FROM produtos WHERE id=$1', [req.params.id]);
+    if (!atual.rows.length) return res.status(404).json({ erro: 'Produto não encontrado' });
+    const p = atual.rows[0];
+
+    const { rows } = await pool.query(
+      `UPDATE produtos SET
+        nome = $1, descricao = $2, preco = $3, preco_original = $4,
+        desconto = $5, categoria = $6, fotos = $7, atualizado_em = NOW()
+       WHERE id = $8 RETURNING *`,
+      [
+        nome ?? p.nome,
+        descricao ?? p.descricao,
+        preco ?? p.preco,
+        preco_original !== undefined ? preco_original : p.preco_original,
+        desconto !== undefined ? desconto : p.desconto,
+        categoria ?? p.categoria,
+        fotos ?? p.fotos,
+        req.params.id
+      ]
+    );
+    res.json(rows[0]);
+  } catch (e) {
+    console.error('❌ Erro ao editar produto:', e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
+// ADMIN - UPLOAD DE FOTO (converte a imagem em link via ImgBB, evita salvar base64 pesado no banco)
+app.post('/api/admin/upload', auth, async (req, res) => {
+  const { imagem } = req.body;
+  if (!imagem) return res.status(400).json({ erro: 'Nenhuma imagem enviada' });
+  if (!process.env.IMGBB_API_KEY) {
+    console.error('❌ IMGBB_API_KEY não configurada no ambiente do servidor.');
+    return res.status(500).json({ erro: 'Upload de imagem não configurado no servidor (falta IMGBB_API_KEY).' });
+  }
+
+  try {
+    // Aceita tanto "data:image/png;base64,AAAA..." quanto o base64 puro
+    const base64 = imagem.includes(',') ? imagem.split(',')[1] : imagem;
+
+    const params = new URLSearchParams();
+    params.append('image', base64);
+
+    const resposta = await fetch(`https://api.imgbb.com/1/upload?key=${process.env.IMGBB_API_KEY}`, {
+      method: 'POST',
+      body: params
+    });
+    const data = await resposta.json();
+
+    if (!data.success) {
+      console.error('❌ ImgBB recusou o upload:', data);
+      return res.status(500).json({ erro: data?.error?.message || 'Falha no upload da imagem' });
+    }
+
+    res.json({ url: data.data.url });
+  } catch (e) {
+    console.error('❌ Erro ao enviar imagem para o ImgBB:', e.message);
     res.status(500).json({ erro: e.message });
   }
 });
