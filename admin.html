@@ -190,6 +190,15 @@ html{scroll-behavior:smooth;}
                 <input id="f-categoria" type="text" placeholder="Ex: essencial, Geral" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
               </div>
             </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Fotos do Produto</label>
+              <div class="flex flex-wrap gap-3 mb-3" id="fotos-preview-novo"></div>
+              <label class="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 cursor-pointer hover:border-brand hover:text-brandDark transition">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span id="upload-label-novo">Clique para enviar fotos (pode selecionar várias)</span>
+                <input type="file" accept="image/*" multiple class="hidden" onchange="handleFotosUpload(this.files, 'novo')">
+              </label>
+            </div>
           </div>
           <button onclick="salvarProduto()" id="btn-salvar" class="w-full py-4 bg-brandDark text-white font-bold rounded-xl hover:bg-brand transition">Salvar Produto</button>
         </div>
@@ -213,34 +222,59 @@ html{scroll-behavior:smooth;}
   </div>
 </div>
 
-<!-- MODAL EDITAR PREÇO -->
-<div id="modal-preco" class="modal fixed inset-0 z-[100] modal-overlay items-center justify-center p-4 hidden">
-  <div class="bg-white rounded-3xl p-8 w-full max-w-sm shadow-2xl">
+<!-- MODAL EDITAR PRODUTO -->
+<div id="modal-editar" class="modal fixed inset-0 z-[100] modal-overlay items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
     <div class="flex items-center gap-3 mb-6">
       <div class="w-10 h-10 bg-brand/20 rounded-lg flex items-center justify-center">
-        <i class="fa-solid fa-tag text-brand"></i>
+        <i class="fa-solid fa-pen text-brand"></i>
       </div>
-      <h3 class="font-serif text-xl font-bold">Editar Preço</h3>
+      <h3 class="font-serif text-xl font-bold">Editar Produto</h3>
     </div>
     <div class="space-y-4 mb-6">
       <div>
-        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Preço Atual (R$)</label>
-        <input id="modal-preco-valor" type="text" placeholder="299,90" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Nome</label>
+        <input id="edit-nome" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
       </div>
       <div>
-        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Preço Original / De (deixe em branco para remover)</label>
-        <input id="modal-preco-original" type="text" placeholder="499,90" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Descrição</label>
+        <textarea id="edit-desc" rows="2" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand resize-none"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Categoria</label>
+          <input id="edit-categoria" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Preço (R$)</label>
+          <input id="edit-preco" type="text" placeholder="299,90" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Preço Original (De)</label>
+          <input id="edit-preco-original" type="text" placeholder="deixe em branco p/ remover" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Badge Desconto</label>
+          <input id="edit-desconto" type="text" placeholder="Ex: 20% OFF" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+        </div>
       </div>
       <div>
-        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Badge Desconto (ex: 20% OFF)</label>
-        <input id="modal-preco-desconto" type="text" placeholder="20% OFF" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+        <label class="text-xs font-bold text-gray-600 uppercase mb-1.5 block">Fotos</label>
+        <div class="flex flex-wrap gap-3 mb-3" id="fotos-preview-edit"></div>
+        <label class="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 cursor-pointer hover:border-brand hover:text-brandDark transition">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <span id="upload-label-edit">Clique para enviar fotos</span>
+          <input type="file" accept="image/*" multiple class="hidden" onchange="handleFotosUpload(this.files, 'edit')">
+        </label>
       </div>
     </div>
     <div class="flex gap-2">
-      <button onclick="closeModalPreco()" class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm rounded-xl transition">
+      <button onclick="closeModalEditar()" class="flex-1 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm rounded-xl transition">
         Cancelar
       </button>
-      <button onclick="salvarPreco()" class="flex-1 px-4 py-3 bg-brandDark hover:bg-brand text-white font-bold text-sm rounded-xl transition">
+      <button onclick="salvarEdicao()" id="btn-salvar-edicao" class="flex-1 px-4 py-3 bg-brandDark hover:bg-brand text-white font-bold text-sm rounded-xl transition">
         Salvar
       </button>
     </div>
@@ -260,6 +294,8 @@ let todosOsProdutos = [];
 let modoSelecao = false;
 let selecionados = new Set();
 let editandoId = null;
+let fotosNovo = [];
+let fotosEdit = [];
 
 // Teste automático de conexão
 window.addEventListener('load', () => {
@@ -348,8 +384,8 @@ function renderProdutos() {
 
       ${!modoSelecao ? `
         <div class="flex gap-1.5 shrink-0">
-          <button onclick="abrirModalPreco(${p.id}, '${p.preco}', '${p.preco_original||''}', '${p.desconto||''}')"
-            class="text-gray-400 hover:text-gray-600 text-sm p-2 hover:bg-gray-100 rounded" title="Editar preço">
+          <button onclick="abrirModalEditar(${p.id})"
+            class="text-gray-400 hover:text-gray-600 text-sm p-2 hover:bg-gray-100 rounded" title="Editar produto">
             <i class="fa-solid fa-pen"></i>
           </button>
           <button onclick="excluirProduto(${p.id})"
@@ -447,12 +483,14 @@ async function salvarProduto() {
   if (!nome || !preco) { showToast('Preencha os campos obrigatórios', 'erro'); return; }
 
   try {
-    await apiFetch('/api/admin/produtos', 'POST', { nome, descricao: desc, preco, categoria });
+    await apiFetch('/api/admin/produtos', 'POST', { nome, descricao: desc, preco, categoria, fotos: fotosNovo });
     showToast('Produto criado com sucesso!');
     document.getElementById('f-nome').value = '';
     document.getElementById('f-desc').value = '';
     document.getElementById('f-preco').value = '';
     document.getElementById('f-categoria').value = '';
+    fotosNovo = [];
+    renderFotosPreview('novo');
     showTab('produtos');
   } catch (err) { showToast(err.message, 'erro'); }
 }
@@ -466,38 +504,103 @@ async function excluirProduto(id) {
   } catch (err) { showToast(err.message, 'erro'); }
 }
 
-// ===== MODAL PREÇO =====
-function abrirModalPreco(id, preco, original, desconto) {
+// ===== MODAL EDITAR PRODUTO =====
+function abrirModalEditar(id) {
+  const p = todosOsProdutos.find(x => x.id === id);
+  if (!p) return;
   editandoId = id;
-  document.getElementById('modal-preco-valor').value = preco;
-  document.getElementById('modal-preco-original').value = original;
-  document.getElementById('modal-preco-desconto').value = desconto;
-  document.getElementById('modal-preco').classList.add('show');
+  fotosEdit = Array.isArray(p.fotos) ? [...p.fotos] : [];
+  document.getElementById('edit-nome').value = p.nome || '';
+  document.getElementById('edit-desc').value = p.descricao || '';
+  document.getElementById('edit-categoria').value = p.categoria || '';
+  document.getElementById('edit-preco').value = p.preco || '';
+  document.getElementById('edit-preco-original').value = p.preco_original || '';
+  document.getElementById('edit-desconto').value = p.desconto || '';
+  renderFotosPreview('edit');
+  document.getElementById('modal-editar').classList.add('show');
 }
 
-function closeModalPreco() {
-  document.getElementById('modal-preco').classList.remove('show');
+function closeModalEditar() {
+  document.getElementById('modal-editar').classList.remove('show');
   editandoId = null;
 }
 
-async function salvarPreco() {
+async function salvarEdicao() {
   if (!editandoId) return;
-  const preco = document.getElementById('modal-preco-valor').value.trim();
-  const original = document.getElementById('modal-preco-original').value.trim();
-  const desconto = document.getElementById('modal-preco-desconto').value.trim();
+  const nome = document.getElementById('edit-nome').value.trim();
+  const preco = document.getElementById('edit-preco').value.trim();
+  if (!nome || !preco) { showToast('Nome e preço são obrigatórios', 'erro'); return; }
 
-  if (!preco) { showToast('Preço não pode estar vazio', 'erro'); return; }
+  const payload = {
+    nome,
+    descricao: document.getElementById('edit-desc').value.trim(),
+    preco,
+    preco_original: document.getElementById('edit-preco-original').value.trim() || null,
+    desconto: document.getElementById('edit-desconto').value.trim() || null,
+    categoria: document.getElementById('edit-categoria').value.trim() || 'Geral',
+    fotos: fotosEdit
+  };
 
   try {
-    await apiFetch(`/api/admin/produtos/${editandoId}`, 'PUT', {
-      preco,
-      preco_original: original || null,
-      desconto: desconto || null
-    });
-    showToast('✅ Preço atualizado!');
-    closeModalPreco();
+    await apiFetch(`/api/admin/produtos/${editandoId}`, 'PUT', payload);
+    showToast('✅ Produto atualizado!');
+    closeModalEditar();
     loadProdutos();
-  } catch(err) { showToast('Erro: ' + err.message, 'erro'); }
+  } catch (err) { showToast('Erro: ' + err.message, 'erro'); }
+}
+
+// ===== UPLOAD DE FOTOS (converte a imagem em link via ImgBB, através do backend) =====
+function uploadFoto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const data = await apiFetch('/api/admin/upload', 'POST', { imagem: reader.result });
+        resolve(data.url);
+      } catch (err) { reject(err); }
+    };
+    reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function handleFotosUpload(fileList, tipo) {
+  const arquivos = [...fileList];
+  if (!arquivos.length) return;
+  const label = document.getElementById(`upload-label-${tipo}`);
+  const textoOriginal = label.textContent;
+
+  for (let i = 0; i < arquivos.length; i++) {
+    label.textContent = `Enviando ${i + 1}/${arquivos.length}...`;
+    try {
+      const url = await uploadFoto(arquivos[i]);
+      if (tipo === 'novo') fotosNovo.push(url); else fotosEdit.push(url);
+      renderFotosPreview(tipo);
+    } catch (err) {
+      showToast('Erro ao enviar foto: ' + err.message, 'erro');
+    }
+  }
+
+  label.textContent = textoOriginal;
+}
+
+function renderFotosPreview(tipo) {
+  const arr = tipo === 'novo' ? fotosNovo : fotosEdit;
+  const cont = document.getElementById(`fotos-preview-${tipo}`);
+  if (!cont) return;
+  cont.innerHTML = arr.map((url, i) => `
+    <div class="relative w-16 h-20 shrink-0">
+      <img src="${url}" class="w-16 h-20 object-cover object-top rounded-lg border border-gray-200">
+      <button type="button" onclick="removerFoto(${i}, '${tipo}')" class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center hover:bg-red-600" title="Remover">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  `).join('');
+}
+
+function removerFoto(i, tipo) {
+  if (tipo === 'novo') fotosNovo.splice(i, 1); else fotosEdit.splice(i, 1);
+  renderFotosPreview(tipo);
 }
 
 // ===== IMPORTAR JSON =====
