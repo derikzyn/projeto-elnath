@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lingerie Esquenta | Seja sua própria inspiração</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
@@ -460,6 +461,13 @@ html { scroll-behavior:smooth; }
 
 <script>
 // ============================================================
+// CONFIGURACAO SUPABASE (PREENCHA COM OS DADOS DO SEU PROJETO)
+// ============================================================
+const SUPABASE_URL = 'https://komrnnhncrfvprpfyleb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Lcg2fur6gtTOVsLCxH_b5g_Twe3-76c';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============================================================
 // DYNAMIC STATE
 // ============================================================
 let produtos = [];
@@ -470,15 +478,19 @@ let modalCar = 0;
 let curModal = null;
 let qA = {};
 
-// ── Carrega produtos vindos do banco do Railway ──────────
+// ── Carrega produtos direto do Supabase ──────────
 async function carregarProdutos() {
   try {
-    const apiUrl = 'https://projeto-elnath-production.up.railway.app/api/produtos'; // Apontando diretamente para o Railway
-    const res = await fetch(apiUrl);
-    if (!res.ok) throw new Error('Falha na API: ' + res.status);
-    produtos = await res.json();
+    const { data, error } = await db
+      .from('produtos')
+      .select('id, nome, descricao, preco, preco_original, desconto, fotos, categoria')
+      .eq('ativo', true)
+      .order('id', { ascending: false });
+
+    if (error) throw error;
+    produtos = data || [];
   } catch (err) {
-    console.warn('API offline ou banco vazio.', err);
+    console.warn('Erro ao carregar produtos do Supabase:', err);
     produtos = [];
   }
 }
@@ -634,7 +646,6 @@ function openModal(id) {
        <p class="text-xs text-green-600 font-semibold mt-1">✓ Economize com o ${p.desconto}</p>`
     : `<p class="text-3xl font-black text-brandDark">${precoFinal}</p>`;
 
-  // Uso estratégico da classe .modal-full-img (com contain) para evitar cortes verticais
   const photos = `<div class="relative overflow-hidden bg-[#faf8f9]" style="height:440px;" id="mcar">
     ${p.fotos && p.fotos.length ? p.fotos.map((src,i)=>`<img src="${src}" class="car-img modal-full-img ${i===0?"on":""}" id="mi${i}" alt="${p.nome}">`).join("") : ''}
     ${p.fotos && p.fotos.length>1?`
