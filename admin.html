@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin — Lingerie Esquenta</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script>
@@ -38,12 +39,14 @@ html{scroll-behavior:smooth;}
     </div>
     <h1 class="font-serif text-2xl font-bold mb-1">Área Admin</h1>
     <p class="text-xs text-gray-400 mb-6">Lingerie Esquenta — Painel de Gerenciamento</p>
+    <input id="email-input" type="email" placeholder="E-mail de acesso..." onkeydown="if(event.key==='Enter')document.getElementById('senha-input').focus()"
+      class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand mb-3 text-center">
     <input id="senha-input" type="password" placeholder="Senha de acesso..." onkeydown="if(event.key==='Enter')doLogin()"
-      class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand mb-3 text-center tracking-widest">
-    <button onclick="doLogin()" class="w-full py-3 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-brand transition">
+      class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand mb-4 text-center tracking-widest">
+    <button onclick="doLogin()" id="btn-login" class="w-full py-3 bg-brandDark text-white font-bold text-sm uppercase tracking-wider rounded-xl hover:bg-brand transition">
       Entrar <i class="fa-solid fa-arrow-right ml-1 text-xs"></i>
     </button>
-    <p id="login-error" class="text-red-500 text-xs mt-3 hidden">Senha incorreta. Tente novamente.</p>
+    <p id="login-error" class="text-red-500 text-xs mt-3 hidden">E-mail ou senha incorretos.</p>
   </div>
 </div>
 
@@ -187,7 +190,7 @@ html{scroll-behavior:smooth;}
               </div>
               <div>
                 <label class="block text-xs font-bold text-gray-600 mb-1.5 uppercase">Categoria</label>
-                <input id="f-categoria" type="text" placeholder="Ex: essencial, Geral" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
+                <input id="f-categoria" type="text" placeholder="Ex: essencial, lancamentos, Geral" class="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-brand">
               </div>
             </div>
             <div>
@@ -288,8 +291,13 @@ html{scroll-behavior:smooth;}
 </div>
 
 <script>
-const BASE_URL = 'https://projeto-elnath-production.up.railway.app';
-let SENHA = 'esquenta2026';
+// ============================================================
+// CONFIGURACAO SUPABASE (PREENCHA COM OS DADOS DO SEU PROJETO)
+// ============================================================
+const SUPABASE_URL = 'https://komrnnhncrfvprpfyleb.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Lcg2fur6gtTOVsLCxH_b5g_Twe3-76c';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 let todosOsProdutos = [];
 let modoSelecao = false;
 let selecionados = new Set();
@@ -297,33 +305,52 @@ let editandoId = null;
 let fotosNovo = [];
 let fotosEdit = [];
 
-// Teste automático de conexão
-window.addEventListener('load', () => {
-  doLogin();
+// Verifica se o Gustavo ja esta logado ao abrir a pagina
+window.addEventListener('load', async () => {
+  const { data: { session } } = await db.auth.getSession();
+  if (session) {
+    abrirPainel();
+  }
 });
 
-// ===== AUTH =====
-function doLogin() {
-  const inp = document.getElementById('senha-input').value.trim();
-  if (!inp) return;
-  fetch(`${BASE_URL}/api/admin/produtos`, { headers: { 'x-admin-senha': inp } })
-    .then(res => {
-      if (res.ok) {
-        SENHA = inp;
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('app').classList.remove('hidden');
-        showTab('dashboard');
-      } else {
-        document.getElementById('login-error').classList.remove('hidden');
-      }
-    })
-    .catch(() => {
-      document.getElementById('login-error').textContent = 'Erro ao conectar ao servidor.';
-      document.getElementById('login-error').classList.remove('hidden');
-    });
+function abrirPainel() {
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  showTab('dashboard');
 }
 
-function doLogout() { SENHA = ''; location.reload(); }
+// ===== AUTH (SUPABASE AUTH) =====
+async function doLogin() {
+  const email = document.getElementById('email-input').value.trim();
+  const password = document.getElementById('senha-input').value.trim();
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('btn-login');
+
+  if (!email || !password) {
+    errEl.textContent = 'Preencha e-mail e senha.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  errEl.classList.add('hidden');
+  btn.disabled = true;
+
+  const { error } = await db.auth.signInWithPassword({ email, password });
+  btn.disabled = false;
+
+  if (error) {
+    errEl.textContent = 'E-mail ou senha incorretos.';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  abrirPainel();
+}
+
+async function doLogout() {
+  await db.auth.signOut();
+  location.reload();
+}
 
 // ===== TABS =====
 function showTab(tab) {
@@ -336,12 +363,19 @@ function showTab(tab) {
 // ===== DASHBOARD =====
 async function loadDashboard() {
   try {
-    const h = await fetch(`${BASE_URL}/api/health`).then(r => r.json());
-    document.getElementById('dash-db-status').textContent = h.status === 'ok' ? '✅ Conectado' : '❌ Desconectado';
-    const ps = await apiFetch('/api/admin/produtos');
-    document.getElementById('dash-total').textContent = ps.length;
-    document.getElementById('dash-oferta').textContent = ps.filter(p => p.desconto).length;
-  } catch {}
+    const { data, error } = await db
+      .from('produtos')
+      .select('id, desconto, ativo')
+      .eq('ativo', true);
+
+    if (error) throw error;
+
+    document.getElementById('dash-db-status').textContent = '✅ Conectado';
+    document.getElementById('dash-total').textContent = data.length;
+    document.getElementById('dash-oferta').textContent = data.filter(p => p.desconto).length;
+  } catch (err) {
+    document.getElementById('dash-db-status').textContent = '❌ Desconectado';
+  }
 }
 
 // ===== PRODUTOS =====
@@ -350,7 +384,14 @@ async function loadProdutos() {
   selecionados.clear();
   atualizarBarraSelecao();
   try {
-    todosOsProdutos = await apiFetch('/api/admin/produtos');
+    const { data, error } = await db
+      .from('produtos')
+      .select('*')
+      .eq('ativo', true)
+      .order('id', { ascending: false });
+
+    if (error) throw error;
+    todosOsProdutos = data || [];
     renderProdutos();
   } catch (err) {
     cont.innerHTML = `<p class="text-red-500 text-sm">Erro ao carregar: ${err.message}</p>`;
@@ -359,16 +400,23 @@ async function loadProdutos() {
 
 function renderProdutos() {
   const cont = document.getElementById('prod-list');
-  cont.innerHTML = todosOsProdutos.map(p => `
+  if (!todosOsProdutos.length) {
+    cont.innerHTML = `<p class="text-gray-400 text-sm py-8 text-center">Nenhum produto ativo cadastrado ainda.</p>`;
+    return;
+  }
+
+  cont.innerHTML = todosOsProdutos.map(p => {
+    const capa = Array.isArray(p.fotos) && p.fotos.length ? p.fotos[0] : null;
+    return `
     <div id="card-${p.id}" class="prod-card bg-white rounded-xl border p-3 flex items-center justify-between gap-3 ${selecionados.has(p.id) ? 'selecionado' : ''}">
       <div class="flex items-center gap-3 flex-1">
         ${modoSelecao ? `
           <input type="checkbox" class="checkbox-sel" ${selecionados.has(p.id) ? 'checked' : ''}
             onchange="toggleSelecao(${p.id}, this.checked)">
         ` : ''}
-        
-        ${p.foto_capa
-          ? `<img src="${p.foto_capa}" class="thumb" alt="" />`
+
+        ${capa
+          ? `<img src="${capa}" class="thumb" alt="" />`
           : `<div class="thumb flex items-center justify-center bg-brandLight text-lg">👗</div>`
         }
 
@@ -389,13 +437,14 @@ function renderProdutos() {
             <i class="fa-solid fa-pen"></i>
           </button>
           <button onclick="excluirProduto(${p.id})"
-            class="text-gray-400 hover:text-red-600 text-sm p-2 hover:bg-red-50 rounded">
+            class="text-gray-400 hover:text-red-600 text-sm p-2 hover:bg-red-50 rounded" title="Desativar produto">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
       ` : ''}
     </div>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // ===== SELEÇÃO MÚLTIPLA =====
@@ -458,19 +507,21 @@ async function excluirSelecionados() {
   if (!confirm(`Deseja desativar ${selecionados.size} produto(s) selecionado(s)?`)) return;
 
   const ids = [...selecionados];
-  let ok = 0;
   showToast(`Excluindo ${ids.length} produto(s)...`, 'info');
 
-  for (const id of ids) {
-    try {
-      await apiFetch(`/api/admin/produtos/${id}`, 'DELETE');
-      ok++;
-    } catch { }
+  const { error } = await db
+    .from('produtos')
+    .update({ ativo: false, atualizado_em: new Date().toISOString() })
+    .in('id', ids);
+
+  if (error) {
+    showToast('Erro: ' + error.message, 'erro');
+    return;
   }
 
   cancelarSelecao();
   await loadProdutos();
-  showToast(`✅ ${ok} produto(s) desativado(s).`);
+  showToast(`✅ ${ids.length} produto(s) desativado(s).`);
 }
 
 // ===== CRUD =====
@@ -482,26 +533,39 @@ async function salvarProduto() {
 
   if (!nome || !preco) { showToast('Preencha os campos obrigatórios', 'erro'); return; }
 
-  try {
-    await apiFetch('/api/admin/produtos', 'POST', { nome, descricao: desc, preco, categoria, fotos: fotosNovo });
-    showToast('Produto criado com sucesso!');
-    document.getElementById('f-nome').value = '';
-    document.getElementById('f-desc').value = '';
-    document.getElementById('f-preco').value = '';
-    document.getElementById('f-categoria').value = '';
-    fotosNovo = [];
-    renderFotosPreview('novo');
-    showTab('produtos');
-  } catch (err) { showToast(err.message, 'erro'); }
+  const { error } = await db
+    .from('produtos')
+    .insert([{ nome, descricao: desc, preco, categoria, fotos: fotosNovo, ativo: true }]);
+
+  if (error) {
+    showToast('Erro ao salvar: ' + error.message, 'erro');
+    return;
+  }
+
+  showToast('Produto criado com sucesso!');
+  document.getElementById('f-nome').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-preco').value = '';
+  document.getElementById('f-categoria').value = '';
+  fotosNovo = [];
+  renderFotosPreview('novo');
+  showTab('produtos');
 }
 
 async function excluirProduto(id) {
-  if(!confirm('Deseja desativar este produto?')) return;
-  try {
-    await apiFetch(`/api/admin/produtos/${id}`, 'DELETE');
-    showToast('Produto desativado.');
-    loadProdutos();
-  } catch (err) { showToast(err.message, 'erro'); }
+  if (!confirm('Deseja desativar este produto?')) return;
+  const { error } = await db
+    .from('produtos')
+    .update({ ativo: false, atualizado_em: new Date().toISOString() })
+    .eq('id', id);
+
+  if (error) {
+    showToast('Erro: ' + error.message, 'erro');
+    return;
+  }
+
+  showToast('Produto desativado.');
+  loadProdutos();
 }
 
 // ===== MODAL EDITAR PRODUTO =====
@@ -538,24 +602,38 @@ async function salvarEdicao() {
     preco_original: document.getElementById('edit-preco-original').value.trim() || null,
     desconto: document.getElementById('edit-desconto').value.trim() || null,
     categoria: document.getElementById('edit-categoria').value.trim() || 'Geral',
-    fotos: fotosEdit
+    fotos: fotosEdit,
+    atualizado_em: new Date().toISOString()
   };
 
-  try {
-    await apiFetch(`/api/admin/produtos/${editandoId}`, 'PUT', payload);
-    showToast('✅ Produto atualizado!');
-    closeModalEditar();
-    loadProdutos();
-  } catch (err) { showToast('Erro: ' + err.message, 'erro'); }
+  const { error } = await db
+    .from('produtos')
+    .update(payload)
+    .eq('id', editandoId);
+
+  if (error) {
+    showToast('Erro: ' + error.message, 'erro');
+    return;
+  }
+
+  showToast('✅ Produto atualizado!');
+  closeModalEditar();
+  loadProdutos();
 }
 
-// ===== UPLOAD DE FOTOS (converte a imagem em link via ImgBB, através do backend) =====
+// ===== UPLOAD DE FOTOS (VIA NETLIFY FUNCTION -> IMGBB) =====
 function uploadFoto(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const data = await apiFetch('/api/admin/upload', 'POST', { imagem: reader.result });
+        const res = await fetch('/.netlify/functions/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imagem: reader.result })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.erro || 'Falha no upload');
         resolve(data.url);
       } catch (err) { reject(err); }
     };
@@ -625,47 +703,34 @@ async function importarJSON() {
   const txtOriginal = btn.innerHTML;
   btn.disabled = true;
 
-  let importados = 0;
+  const itensValidos = lista
+    .filter(item => item.nome && item.preco)
+    .map(item => ({
+      nome: item.nome,
+      descricao: item.descricao || '',
+      preco: String(item.preco),
+      preco_original: item.preco_original ? String(item.preco_original) : null,
+      desconto: item.desconto || null,
+      fotos: Array.isArray(item.fotos) ? item.fotos : [],
+      categoria: item.categoria || 'essencial',
+      ativo: true
+    }));
 
-  showToast(`Importando ${lista.length} itens...`, 'info');
+  btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Importando ${itensValidos.length}...`;
 
-  for (let i = 0; i < lista.length; i++) {
-    const item = lista[i];
-    btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> ${i + 1}/${lista.length}`;
-
-    try {
-      await apiFetch('/api/admin/produtos', 'POST', {
-        nome: item.nome,
-        descricao: item.descricao || '',
-        preco: item.preco,
-        preco_original: item.preco_original || null,
-        desconto: item.desconto || null,
-        fotos: item.fotos || [],
-        categoria: item.categoria || 'essencial'
-      });
-      importados++;
-    } catch (err) {
-      console.error(`Erro ao importar item ${item.nome || i}:`, err);
-    }
-  }
+  const { error } = await db.from('produtos').insert(itensValidos);
 
   btn.innerHTML = txtOriginal;
   btn.disabled = false;
-  document.getElementById('import-json').value = '';
-  showToast(`✅ Importado ${importados}/${lista.length} produtos.`);
-  loadDashboard();
-}
 
-// ===== API =====
-async function apiFetch(url, method = 'GET', body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json', 'x-admin-senha': SENHA } };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(`${BASE_URL}${url}`, opts);
-  const text = await res.text();
-  let data;
-  try { data = JSON.parse(text); } catch { throw new Error('Falha na resposta do servidor.'); }
-  if (!res.ok) throw new Error(data.erro || 'Erro na requisição.');
-  return data;
+  if (error) {
+    showToast('Erro na importação: ' + error.message, 'erro');
+    return;
+  }
+
+  document.getElementById('import-json').value = '';
+  showToast(`✅ ${itensValidos.length} produto(s) importado(s)!`);
+  loadDashboard();
 }
 
 // ===== TOAST =====
